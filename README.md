@@ -16,7 +16,7 @@ flowchart LR
     end
 
     subgraph Discover [1 · Discover]
-        F[Fetch emails<br/>Gmail API, since watermark]
+        F[Fetch emails<br/>Gmail IMAP, since watermark]
         P[Extract job IDs<br/>one module per source]
     end
 
@@ -70,11 +70,11 @@ Each source module handles both stages:
 
 | Layer | Technology |
 | --- | --- |
-| Ingestion | Python, Gmail API, requests + BeautifulSoup, psycopg |
+| Ingestion | Python, Gmail IMAP, requests + BeautifulSoup, psycopg |
 | Database | Supabase (Postgres) |
 | Migrations | Supabase CLI |
 | Frontend (planned) | Next.js, TypeScript, Tailwind, shadcn/ui, Prisma |
-| Scheduling (planned) | GitHub Actions, every ~4 hours |
+| Scheduling | GitHub Actions cron, every 4 hours |
 
 ## Repository layout
 
@@ -85,12 +85,15 @@ job-hunter/
 │   ├── pipeline.py          # entry point: discover → enrich
 │   ├── discover.py          # stage 1: emails → jobs
 │   ├── enrich.py            # stage 2: listing pages → job_details
-│   ├── gmail.py             # Gmail OAuth + incremental email fetching
+│   ├── gmail.py             # Gmail IMAP + incremental email fetching
 │   ├── scraping.py          # shared HTTP session for listing pages
 │   ├── models.py            # Email, Job, JobDetails
 │   └── sources/             # one module per source: email parsing + listing page details
 │       ├── linkedin.py
 │       └── startupjobs.py
+├── scoring/
+│   ├── rules.py             # preferences + deterministic rules → sub-scores
+│   └── score.py             # scoring stage: job_details → job_scores
 ├── supabase/
 │   └── migrations/          # SQL migrations, applied in order
 └── requirements.txt
@@ -106,11 +109,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Gmail API
+### 2. Gmail
 
-1. In Google Cloud Console, create a project and enable the **Gmail API**.
-2. Create an **OAuth client ID** (Desktop app) and save it as `credentials.json` in the repo root.
-3. The first run opens a browser for consent and saves `token.json`. Access is read-only (`gmail.readonly`).
+Ingestion reads Gmail over IMAP with an [app password](https://myaccount.google.com/apppasswords). A Google Cloud OAuth app in Testing mode expires its tokens every 7 days, and publishing one requires a homepage and a privacy policy, which is a lot of overhead for a script that reads your own mailbox.
+
+1. Turn on 2-Step Verification for your Google account (app passwords require it).
+2. Create an app password and add it to `.env` without the spaces:
+
+   ```
+   GMAIL_ADDRESS=you@gmail.com
+   GMAIL_APP_PASSWORD=abcdefghijklmnop
+   ```
+
+The mailbox is opened read-only and searched with Gmail's own query syntax (`X-GM-RAW`), so each source's `GMAIL_QUERY` works just like in the Gmail search box. The app password itself grants full mailbox access, so keep it only in `.env` and GitHub secrets. Changing your Google password revokes it.
 
 ### 3. Supabase
 
@@ -130,7 +141,7 @@ pip install -r requirements.txt
    supabase db push --db-url "$DATABASE_URL"
    ```
 
-`credentials.json`, `token.json` and `.env` are gitignored.
+`.env` is gitignored.
 
 ## Usage
 
@@ -145,6 +156,20 @@ enriched 16 jobs
 ```
 
 Each stage also runs on its own: `python -m ingestion.discover` or `python -m ingestion.enrich`. The second is useful for retrying enrichment after a rate limit without reading Gmail again.
+
+**Scheduled runs:** `.github/workflows/ingest.yml` runs the pipeline and then scoring every 4 hours, and on demand from the Actions tab (Run workflow). It needs the three values from `.env` as repository secrets (Settings → Secrets and variables → Actions): `DATABASE_URL`, `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD`. To set them from `.env`: `gh secret set -f .env`.
+
+**Scoring:** `python -m scoring.score` rescores every open job into `job_scores`: a 0–100 `score` plus the 0–1 sub-scores behind it. Each comes from `scoring/rules.py`:
+
+| Sub-score | Weight | From |
+| --- | --- | --- |
+| `role` | 35 | Title: data engineering 1, backend 0.7, full stack 0.6, frontend 0.5, everything else 0 |
+| `work_style` | 35 | Remote 1 (0.6 if based outside CZ/EU), hybrid 0.1, onsite 0, unknown 0.5 |
+| `stack` | 15 | Title + description: share of 3 technologies from my list (Snowflake, dbt, SQL, Airflow, Python, …) |
+| `seniority` | 10 | Title: none/mid 1, senior 0.6, junior 0.4, lead/principal 0.2 |
+| `salary` | 5 | Top of the stated range ≥ 60k CZK/month 1, below 0, not stated 0.5 |
+
+Every run rescores everything, so editing a rule applies to all jobs on the next run.
 
 **Backfill:** move a source's watermark back in time, then run the pipeline as usual:
 
@@ -182,8 +207,8 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 - [x] Persistence in Supabase with idempotent upserts
 - [x] Incremental loading with watermarks
 - [x] Enrichment from listing pages (details, work style, salary, description, closed listings)
-- [ ] Scheduled runs on GitHub Actions
-- [ ] Deterministic scoring (role, tech stack, seniority, location, compensation) with explainable sub-scores
+- [x] Scheduled runs on GitHub Actions
+- [x] Deterministic scoring (role, work style, tech stack, seniority, compensation) with explainable sub-scores
 - [ ] Next.js feed with Save / Dismiss / Apply
 - [ ] Learn preferences from feed actions
 - [ ] More sources (Wellfound, Greenhouse, Lever, Ashby, company career pages)

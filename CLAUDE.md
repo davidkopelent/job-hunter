@@ -10,7 +10,7 @@ emails → discover (job IDs) → jobs ─→ enrich (listing page) → job_deta
 
 Emails are only a discovery signal. They give a job's identity, because email previews are unreliable. All details (title, company, location, work style, salary, description, closed) come from the listing page. **One exception:** logged-out LinkedIn pages hide work style, so LinkedIn discovery reads the card's "(Hybrid)" marker into `jobs.email_work_style`. Enrichment uses it only when the page has no value. Never scrape LinkedIn with a logged-in session.
 
-- `ingestion/gmail.py`: Gmail OAuth + `fetch_emails(service, query, mime_type, after)`. It knows nothing about job sources.
+- `ingestion/gmail.py`: Gmail over IMAP with an app password (`GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD` in `.env`). `connect()` opens All Mail read-only. `fetch_emails(mailbox, query, mime_type, after)` searches with Gmail syntax via `X-GM-RAW`. It knows nothing about job sources. No OAuth: a Testing-mode Cloud app expires tokens every 7 days, and publishing one needs a homepage and a privacy policy.
 - `ingestion/sources/<source>.py`: one module per source. Each exposes `SOURCE`, `GMAIL_QUERY`, `MIME_TYPE`, `parse_jobs(email) -> list[Job]` and `fetch_details(source_id) -> JobDetails`.
 - `ingestion/models.py`: `Email`, `Job` (identity: `(source, source_id)`, plus url, `discovered_at` = email receive time, and `email_work_style`) and `JobDetails`.
 - Work style is `text[]` of `onsite` / `hybrid` / `remote` (a job may allow several). `null` = unknown.
@@ -19,7 +19,8 @@ Emails are only a discovery signal. They give a job's identity, because email pr
 - `ingestion/enrich.py`: stage 2, listing pages → `job_details` (pending jobs, 429 handling).
 - `ingestion/pipeline.py`: runs both stages. Entry point: `python -m ingestion.pipeline`. Each stage also runs alone: `python -m ingestion.discover` / `python -m ingestion.enrich`.
 - `ingestion/scraping.py`: shared `requests` session + `clean()` for whitespace.
-- `db/`: shared by every stage (ingestion, later scoring). Only `connect()`: psycopg, `DATABASE_URL` in `.env`, Supabase session pooler, autocommit. SQL lives in the stage that writes the table, not in `db/`.
+- `scoring/rules.py`: preferences (patterns, weights, salary floor) + pure functions mapping a job's details to 0–1 sub-scores. `scoring/score.py`: stage 3, rescores every open job on every run → `job_scores` (upsert). Entry point: `python -m scoring.score`.
+- `db/`: shared by every stage (ingestion, scoring). Only `connect()`: psycopg, `DATABASE_URL` in `.env`, Supabase session pooler, autocommit. SQL lives in the stage that writes the table, not in `db/`.
 
 Incremental loading: `ingestion_state.last_email_at` is a watermark for each source. Gmail is queried `after:` watermark minus 1h. Jobs and the watermark advance commit in one transaction per source. New sources start at `now()` (no backlog). Backfill = set the watermark back in time. The upsert keeps the earliest `discovered_at`.
 
@@ -38,7 +39,7 @@ Adding a source means writing a source module, adding it to `SOURCES`, and addin
 
 ## Stack
 
-Python ingestion · Supabase Postgres · Supabase CLI migrations · Next.js + TypeScript + Tailwind + shadcn/ui + Prisma (queries only) · GitHub Actions cron (later) · deterministic scoring, no LLM for now.
+Python ingestion · Supabase Postgres · Supabase CLI migrations · Next.js + TypeScript + Tailwind + shadcn/ui + Prisma (queries only) · GitHub Actions cron (`.github/workflows/ingest.yml`, every 4 h; secrets `DATABASE_URL`, `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`) · deterministic scoring, no LLM for now.
 
 ## Code style
 
@@ -50,4 +51,4 @@ Python ingestion · Supabase Postgres · Supabase CLI migrations · Next.js + Ty
 
 ## Secrets
 
-`credentials.json`, `token.json` and `.env` are local only (gitignored). Never commit or print them.
+`.env` is local only (gitignored). Never commit or print it.
