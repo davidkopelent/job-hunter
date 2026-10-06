@@ -74,7 +74,7 @@ Each source module handles both stages:
 | Ingestion | Python, Gmail IMAP, requests + BeautifulSoup, psycopg |
 | Database | Supabase (Postgres) |
 | Migrations | Supabase CLI |
-| Frontend (planned) | Next.js, TypeScript, Tailwind, shadcn/ui, Prisma |
+| Frontend | Next.js, TypeScript, Tailwind, shadcn/ui, Prisma (queries only), Vercel |
 | Scheduling | GitHub Actions cron, every 4 hours |
 
 ## Repository layout
@@ -97,6 +97,11 @@ job-hunter/
 │   └── score.py             # scoring stage: job_details → job_scores
 ├── supabase/
 │   └── migrations/          # SQL migrations, applied in order
+├── web/                     # Next.js feed (deployed on Vercel)
+│   ├── app/                 # feed page, login, server actions
+│   ├── lib/                 # Prisma client, feed queries, auth
+│   ├── prisma/              # schema.prisma, pulled from the database
+│   └── proxy.ts             # password protection
 └── requirements.txt
 ```
 
@@ -142,7 +147,27 @@ The mailbox is opened read-only and searched with Gmail's own query syntax (`X-G
    supabase db push --db-url "$DATABASE_URL"
    ```
 
-`.env` is gitignored.
+### 4. Web app
+
+Needs Node.js 22.12 or newer (Prisma 7).
+
+```bash
+cd web
+npm install                  # also runs `prisma generate`
+```
+
+`web/.env`:
+
+```
+DATABASE_URL=<same as the Python .env>
+APP_PASSWORD=<long random password>
+```
+
+`npm run dev` serves the feed on http://localhost:3000.
+
+**Deploy on Vercel:** import the GitHub repo, set **Root Directory** to `web`, and add `DATABASE_URL` and `APP_PASSWORD` as environment variables. Everything else is auto-detected.
+
+`.env` and `web/.env` are gitignored.
 
 ## Usage
 
@@ -172,6 +197,8 @@ Each stage also runs on its own: `python -m ingestion.discover` or `python -m in
 
 Every run rescores everything, so editing a rule applies to all jobs on the next run.
 
+**Feed:** the web app lists open, scored jobs by score, with each sub-score shown so the total is explainable. **Save**, **Applied** and **Dismiss** write `job_actions` (one row per job, the current decision; **Undo** deletes it), and the tabs filter by it: New (no decision yet), Saved, Applied, Dismissed. The header shows when emails were last checked. A single password (`APP_PASSWORD`) protects everything: `proxy.ts` redirects to the login page without a valid session cookie, and every server action checks the session again.
+
 **Backfill:** move a source's watermark back in time, then run the pipeline as usual:
 
 ```sql
@@ -191,7 +218,7 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 - Applied migrations are tracked in `supabase_migrations.schema_migrations`.
 - Never edit a migration that has already been applied; add a new one.
 - Enable row-level security on every new table. Supabase exposes the `public` schema through its REST API.
-- After schema changes, the frontend refreshes its Prisma client with `prisma db pull && prisma generate`.
+- After schema changes, refresh the web app's Prisma schema and client: `cd web && npm run db:pull`.
 
 ## Adding a source
 
@@ -210,6 +237,6 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 - [x] Enrichment from listing pages (details, work style, salary, description, closed listings)
 - [x] Scheduled runs on GitHub Actions
 - [x] Deterministic scoring (role, work style, tech stack, seniority, compensation) with explainable sub-scores
-- [ ] Next.js feed with Save / Dismiss / Apply
+- [x] Next.js feed with Save / Dismiss / Apply
 - [ ] Learn preferences from feed actions
 - [ ] More sources (Wellfound, Greenhouse, Lever, Ashby, company career pages)

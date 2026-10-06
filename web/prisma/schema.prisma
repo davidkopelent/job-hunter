@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ingestion_state {
+  source          String    @id
+  last_email_at   DateTime  @db.Timestamptz(6)
+  last_checked_at DateTime? @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_actions {
+  job_id   String   @id @db.Uuid
+  action   String
+  acted_at DateTime @default(now()) @db.Timestamptz(6)
+  jobs     jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_details {
+  job_id      String   @id @db.Uuid
+  closed      Boolean
+  title       String?
+  company     String?
+  location    String?
+  salary      String?
+  description String?
+  fetched_at  DateTime @default(now()) @db.Timestamptz(6)
+  work_style  String[]
+  jobs        jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_scores {
+  job_id     String   @id @db.Uuid
+  score      Int      @db.SmallInt
+  role       Float    @db.Real
+  seniority  Float    @db.Real
+  work_style Float    @db.Real
+  stack      Float    @db.Real
+  salary     Float    @db.Real
+  scored_at  DateTime @default(now()) @db.Timestamptz(6)
+  jobs       jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model jobs {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  source           String
+  source_id        String
+  url              String
+  discovered_at    DateTime     @db.Timestamptz(6)
+  email_work_style String[]
+  job_actions      job_actions?
+  job_details      job_details?
+  job_scores       job_scores?
+
+  @@unique([source, source_id])
+}

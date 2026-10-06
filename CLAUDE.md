@@ -28,13 +28,24 @@ Enrichment processes every job with no `job_details` row, 1 s apart. On a 429 it
 
 Adding a source means writing a source module, adding it to `SOURCES`, and adding its `ingestion_state` row in a new migration.
 
+## Web app (`web/`)
+
+Next.js 16 with Cache Components, so read `web/AGENTS.md` and the bundled docs in `web/node_modules/next/dist/docs/` before writing Next.js code; APIs differ from older versions (`proxy.ts` replaced middleware, request-time data goes behind `<Suspense>`, `refresh()` after mutations). Needs Node ≥ 22.12 (Prisma 7).
+
+- `lib/feed.ts`: views (new / saved / applied / dismissed) and the feed query: open, scored jobs; new ones by score, acted-on ones by `acted_at`. No feed table; it's a join.
+- `app/actions.ts`: `setAction(jobId, action | null)` upserts or deletes `job_actions`, then `refresh()`.
+- `lib/auth.ts` + `proxy.ts` + `app/login/`: single password `APP_PASSWORD`. The session cookie is an HMAC keyed by the password (changing it logs everyone out). Every server action calls `requireSession()` too; the proxy alone isn't enough.
+- `lib/db.ts`: Prisma 7 client with the `pg` driver adapter; generated into `lib/generated/prisma` (gitignored, `postinstall` regenerates).
+- shadcn/ui uses the `base-nova` style (Base UI, not Radix): links styled as buttons use `buttonVariants`, not `asChild`.
+- Env (`web/.env`, Vercel): `DATABASE_URL`, `APP_PASSWORD`. Vercel Root Directory = `web`.
+
 ## Database & migrations
 
 - The schema is owned **only** by SQL migrations in `supabase/migrations/`, applied with the Supabase CLI.
 - New migration: `supabase migration new <name>` → write SQL → `supabase db push --db-url "$DATABASE_URL"`.
 - Never edit an applied migration; add a new one.
 - Enable RLS on every new table (Supabase exposes `public` through its REST API; the postgres role used by our code bypasses RLS).
-- Prisma (future Next.js app) never migrates the schema. It only queries. After each migration, run `prisma db pull` + `prisma generate`.
+- Prisma (`web/`) never migrates the schema. It only queries. After each migration, run `cd web && npm run db:pull` (`prisma db pull` + `prisma generate`).
 - If a Prisma model needs a DB-side default (ids, timestamps), use `dbgenerated(...)`, because Python inserts rows too.
 
 ## Stack
@@ -45,7 +56,7 @@ Python ingestion · Supabase Postgres · Supabase CLI migrations · Next.js + Ty
 
 - Minimal code. No abstraction until it's needed (prefer modules and functions to classes and base classes).
 - No defensive validation or handling for cases that can't happen; let unexpected input fail loudly.
-- Keep layers separate: fetching, parsing and storage don't know about each other. One writer per table (ingestion → `jobs`, enrichment → `job_details`, scoring → `job_scores`).
+- Keep layers separate: fetching, parsing and storage don't know about each other. One writer per table (ingestion → `jobs`, enrichment → `job_details`, scoring → `job_scores`, web app → `job_actions`).
 - Dedup on `(source, source_id)`; the DB enforces it with a unique constraint plus upsert.
 - Test DB code against Supabase only inside `conn.transaction(force_rollback=True)`.
 
