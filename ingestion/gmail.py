@@ -1,73 +1,55 @@
-import base64
-from datetime import datetime, timezone
-from pathlib import Path
+"""Gmail over IMAP with an app password. Searches use Gmail's own query syntax (X-GM-RAW)."""
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+import email
+import email.policy
+import imaplib
+import os
+import re
+from datetime import datetime
+
+from dotenv import load_dotenv
 
 from ingestion.models import Email
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-CREDENTIALS_FILE = BASE_DIR / "credentials.json"
-TOKEN_FILE = BASE_DIR / "token.json"
+load_dotenv()
 
 
-def get_gmail_service():
-    credentials = None
-
-    if TOKEN_FILE.exists():
-        credentials = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-
-    if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            credentials = flow.run_local_server(port=0)
-
-        TOKEN_FILE.write_text(credentials.to_json())
-
-    return build("gmail", "v1", credentials=credentials)
+def connect() -> imaplib.IMAP4_SSL:
+    """Log in and open All Mail read-only. Use as `with connect() as mailbox:` to log out afterwards."""
+    mailbox = imaplib.IMAP4_SSL("imap.gmail.com")
+    mailbox.login(os.environ["GMAIL_ADDRESS"], os.environ["GMAIL_APP_PASSWORD"])
+    mailbox.select(all_mail_folder(mailbox), readonly=True)
+    return mailbox
 
 
-def fetch_emails(service, query: str, mime_type: str, after: datetime) -> list[Email]:
+def all_mail_folder(mailbox: imaplib.IMAP4_SSL) -> str:
+    # All Mail's name depends on the Gmail UI language; its \All flag doesn't.
+    # A LIST line looks like: (\HasNoChildren \All) "/" "[Gmail]/All Mail"
+    _, folders = mailbox.list()
+    return next(folder.decode().split(' "/" ')[1] for folder in folders if b"\\All" in folder)
+
+
+def fetch_emails(mailbox: imaplib.IMAP4_SSL, query: str, mime_type: str, after: datetime) -> list[Email]:
     """Return every email matching the Gmail search `query` received after `after`."""
-    messages = service.users().messages()
     query = f"{query} after:{int(after.timestamp())}"
-
-    message_ids = []
-    page_token = None
-    while True:
-        response = messages.list(userId="me", q=query, pageToken=page_token).execute()
-        message_ids += [message["id"] for message in response.get("messages", [])]
-        page_token = response.get("nextPageToken")
-        if not page_token:
-            break
+    _, data = mailbox.uid("search", "X-GM-RAW", f'"{query}"')
 
     emails = []
-    for message_id in message_ids:
-        message = messages.get(userId="me", id=message_id).execute()
-        emails.append(
-            Email(
-                received_at=datetime.fromtimestamp(int(message["internalDate"]) / 1000, timezone.utc),
-                body=get_body(message["payload"], mime_type),
-            )
-        )
+    for uid in data[0].split():
+        _, response = mailbox.uid("fetch", uid, "(INTERNALDATE BODY.PEEK[])")
+        (meta, raw), *_ = response
+        message = email.message_from_bytes(raw, policy=email.policy.default)
+        emails.append(Email(received_at=parse_internal_date(meta), body=get_body(message, mime_type)))
 
     return emails
 
 
-def get_body(payload, mime_type: str) -> str:
-    if payload["mimeType"] == mime_type:
-        return base64.urlsafe_b64decode(payload["body"]["data"]).decode()
+def parse_internal_date(meta: bytes) -> datetime:
+    # The time Gmail received the email, e.g. INTERNALDATE "06-Oct-2026 08:42:11 +0000"
+    internal_date = re.search(rb'INTERNALDATE "([^"]+)"', meta).group(1).decode()
+    return datetime.strptime(internal_date, "%d-%b-%Y %H:%M:%S %z")
 
-    for part in payload.get("parts", []):
-        body = get_body(part, mime_type)
-        if body:
-            return body
 
-    return ""
+def get_body(message: email.message.EmailMessage, mime_type: str) -> str:
+    part = next((part for part in message.walk() if part.get_content_type() == mime_type), None)
+    return part.get_content() if part else ""

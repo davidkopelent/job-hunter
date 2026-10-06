@@ -23,21 +23,21 @@ UPSERT_JOB = """
 
 
 def discover(conn) -> None:
-    service = gmail.get_gmail_service()
     watermarks = get_watermarks(conn)
 
-    for name, source in SOURCES.items():
-        after = watermarks[name] - WATERMARK_OVERLAP
-        emails = gmail.fetch_emails(service, source.GMAIL_QUERY, source.MIME_TYPE, after)
-        jobs = [job for email in emails for job in source.parse_jobs(email)]
+    with gmail.connect() as mailbox:
+        for name, source in SOURCES.items():
+            after = watermarks[name] - WATERMARK_OVERLAP
+            emails = gmail.fetch_emails(mailbox, source.GMAIL_QUERY, source.MIME_TYPE, after)
+            jobs = [job for email in emails for job in source.parse_jobs(email)]
 
-        # Jobs and watermark commit together, so a failed run never skips emails.
-        with conn.transaction():
-            upsert_jobs(conn, jobs)
-            if emails:
-                advance_watermark(conn, name, max(email.received_at for email in emails))
+            # Jobs and watermark commit together, so a failed run never skips emails.
+            with conn.transaction():
+                upsert_jobs(conn, jobs)
+                if emails:
+                    advance_watermark(conn, name, max(email.received_at for email in emails))
 
-        print(f"{name}: {len(emails)} emails since {after:%Y-%m-%d %H:%M}, {len(jobs)} job links")
+            print(f"{name}: {len(emails)} emails since {after:%Y-%m-%d %H:%M}, {len(jobs)} job links")
 
 
 def get_watermarks(conn) -> dict[str, datetime]:
