@@ -36,6 +36,7 @@ def discover(conn) -> None:
                 upsert_jobs(conn, jobs)
                 if emails:
                     advance_watermark(conn, name, max(email.received_at for email in emails))
+                mark_checked(conn, name)
 
             print(f"{name}: {len(emails)} emails since {after:%Y-%m-%d %H:%M}, {len(jobs)} job links")
 
@@ -54,6 +55,10 @@ def advance_watermark(conn, source: str, last_email_at: datetime) -> None:
         "update ingestion_state set last_email_at = greatest(last_email_at, %s) where source = %s",
         (last_email_at, source),
     )
+
+
+def mark_checked(conn, source: str) -> None:
+    conn.execute("update ingestion_state set last_checked_at = now() where source = %s", (source,))
 
 
 if __name__ == "__main__":
