@@ -9,7 +9,7 @@ export default function LoginPage() {
           <Crosshair className="size-4" strokeWidth={2.25} />
         </span>
         <span className="text-[15px] font-semibold tracking-tight">
-          Job<span className="text-success">Hunter</span>
+          JobHunter
         </span>
       </div>
       <div className="card-surface p-5">
