@@ -62,9 +62,12 @@ def score_role(title: str) -> float:
     return next((score for pattern, score in ROLES if re.search(pattern, title, re.I)), 0)
 
 
-def score_stack(text: str) -> float:
-    matches = sum(1 for pattern in STACK.values() if re.search(pattern, text, re.I))
-    return min(matches / STACK_FULL_MATCH, 1)
+def match_stack(text: str) -> list[str]:
+    return [name for name, pattern in STACK.items() if re.search(pattern, text, re.I)]
+
+
+def score_stack(technologies: list[str]) -> float:
+    return min(len(technologies) / STACK_FULL_MATCH, 1)
 
 
 def score_seniority(title: str) -> float:
@@ -96,11 +99,13 @@ def salary_czk_month(salary: str) -> float:
 def score(
     title: str, location: str | None, work_style: list[str] | None, salary: str | None, description: str | None
 ) -> dict:
+    technologies = match_stack(f"{title} {description or ''}")
     scores = {
         "role": score_role(title),
         "work_style": score_work_style(work_style, location),
-        "stack": score_stack(f"{title} {description or ''}"),
+        "stack": score_stack(technologies),
         "seniority": score_seniority(title),
         "salary": score_salary(salary),
     }
-    return {**scores, "score": round(sum(WEIGHTS[name] * value for name, value in scores.items()))}
+    total = round(sum(WEIGHTS[name] * value for name, value in scores.items()))
+    return {**scores, "score": total, "technologies": technologies}

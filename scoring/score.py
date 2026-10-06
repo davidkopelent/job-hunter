@@ -4,8 +4,8 @@ import db
 from scoring import rules
 
 UPSERT_SCORE = """
-    insert into job_scores (job_id, score, role, seniority, work_style, stack, salary)
-    values (%(job_id)s, %(score)s, %(role)s, %(seniority)s, %(work_style)s, %(stack)s, %(salary)s)
+    insert into job_scores (job_id, score, role, seniority, work_style, stack, salary, technologies)
+    values (%(job_id)s, %(score)s, %(role)s, %(seniority)s, %(work_style)s, %(stack)s, %(salary)s, %(technologies)s)
     on conflict (job_id) do update set
         score = excluded.score,
         role = excluded.role,
@@ -13,6 +13,7 @@ UPSERT_SCORE = """
         work_style = excluded.work_style,
         stack = excluded.stack,
         salary = excluded.salary,
+        technologies = excluded.technologies,
         scored_at = now()
 """
 
