@@ -32,12 +32,15 @@ Adding a source means writing a source module, adding it to `SOURCES`, and addin
 
 Next.js 16 with Cache Components, so read `web/AGENTS.md` and the bundled docs in `web/node_modules/next/dist/docs/` before writing Next.js code; APIs differ from older versions (`proxy.ts` replaced middleware, request-time data goes behind `<Suspense>`, `refresh()` after mutations). Needs Node ≥ 22.12 (Prisma 7).
 
-- `lib/feed.ts`: views (new / saved / applied / dismissed) and the feed query: open, scored jobs; new ones by score, acted-on ones by `acted_at`. No feed table; it's a join.
-- `app/actions.ts`: `setAction(jobId, action | null)` upserts or deletes `job_actions`, then `refresh()`.
+- `lib/jobs.ts`: queries. Feed = open, scored jobs with no action or `saved`, filtered by URL params (`q`, `ws`, `min`, `sort`); Saved / Applied / Dismissed pages by `acted_at`. No feed table; it's a join.
+- `app/actions.ts`: `setAction(jobId, action | null)` upserts or deletes `job_actions` (applying sets `application_status = 'applied'`), `setApplicationStatus()`; both `refresh()`.
 - `lib/auth.ts` + `proxy.ts` + `app/login/`: single password `APP_PASSWORD`. The session cookie is an HMAC keyed by the password (changing it logs everyone out). Every server action calls `requireSession()` too; the proxy alone isn't enough.
 - `lib/db.ts`: Prisma 7 client with the `pg` driver adapter; generated into `lib/generated/prisma` (gitignored, `postinstall` regenerates).
 - shadcn/ui uses the `base-nova` style (Base UI, not Radix): links styled as buttons use `buttonVariants`, not `asChild`.
-- Env (`web/.env`, Vercel): `DATABASE_URL`, `APP_PASSWORD`. Vercel Root Directory = `web`.
+- Env (`web/.env`, Vercel): `DATABASE_URL` = Supabase **transaction pooler** (port 6543; the session pooler caps all clients at 15), `APP_PASSWORD`. Prisma pool `max` is 3 per instance. Vercel Root Directory = `web`.
+- Design follows the private `davidkopelent/pixel-perfect` Lovable prototype: tokens in `app/globals.css`, shell in `components/app-shell.tsx`, job UI in `components/jobs/`.
+- Client components import constants/types from `lib/job-options.ts`, never `lib/jobs.ts` (it imports Prisma, which would end up in the browser bundle).
+- `usePathname()` suspends on `/jobs/[id]` under Cache Components: the nav renders it inside `<Suspense>` with a non-highlighted fallback.
 
 ## Database & migrations
 

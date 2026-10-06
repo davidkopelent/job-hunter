@@ -3,11 +3,21 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["hour", 3_600_000],
   ["minute", 60_000],
 ];
-const format = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
 
-// "3 hours ago". Reads the clock, so with Cache Components call it only after `await connection()`.
+// "3 hours ago". These read the clock, so with Cache Components call them only after `await connection()`.
 export function timeAgo(date: Date): string {
   const elapsed = Date.now() - date.getTime();
   const [unit, ms] = UNITS.find(([, ms]) => elapsed >= ms) ?? UNITS[UNITS.length - 1];
-  return format.format(-Math.floor(elapsed / ms), unit);
+  return relative.format(-Math.floor(elapsed / ms), unit);
+}
+
+export function minutesAgo(date: Date): number {
+  return Math.floor((Date.now() - date.getTime()) / 60_000);
+}
+
+// "7 Oct"
+export function formatDay(date: Date): string {
+  return day.format(date);
 }

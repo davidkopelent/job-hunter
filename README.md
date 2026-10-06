@@ -159,13 +159,15 @@ npm install                  # also runs `prisma generate`
 `web/.env`:
 
 ```
-DATABASE_URL=<same as the Python .env>
+DATABASE_URL=<the Python .env URL, but port 6543>
 APP_PASSWORD=<long random password>
 ```
 
+The web app uses Supabase's **transaction pooler** (same host, port `6543`). The session pooler (`5432`) allows only 15 clients in total, and serverless instances each open their own pool. The Python pipeline keeps the session pooler.
+
 `npm run dev` serves the feed on http://localhost:3000.
 
-**Deploy on Vercel:** import the GitHub repo, set **Root Directory** to `web`, and add `DATABASE_URL` and `APP_PASSWORD` as environment variables. Everything else is auto-detected.
+**Deploy on Vercel:** import the GitHub repo, set **Root Directory** to `web`, and add `DATABASE_URL` (transaction pooler, port 6543) and `APP_PASSWORD` as environment variables. Everything else is auto-detected.
 
 `.env` and `web/.env` are gitignored.
 
@@ -197,7 +199,7 @@ Each stage also runs on its own: `python -m ingestion.discover` or `python -m in
 
 Every run rescores everything, so editing a rule applies to all jobs on the next run.
 
-**Feed:** the web app lists open, scored jobs by score, with each sub-score shown so the total is explainable. **Save**, **Applied** and **Dismiss** write `job_actions` (one row per job, the current decision; **Undo** deletes it), and the tabs filter by it: New (no decision yet), Saved, Applied, Dismissed. The header shows when emails were last checked. A single password (`APP_PASSWORD`) protects everything: `proxy.ts` redirects to the login page without a valid session cookie, and every server action checks the session again.
+**Feed:** the web app (design from the `pixel-perfect` prototype) lists open, scored jobs in "Worth your time" (score ≥ 70) and "Other matches", with search, work-style, score and sort filters. Cards show the matched technologies (`job_scores.technologies`) and every sub-score; the job page adds score bars and the full description. **Save**, **Mark as applied** and **Dismiss** write `job_actions` (one row per job, the current decision; dismissing offers Undo). Saved, Applied and Dismissed have their own pages; Applications track a status (applied → interview → offer / rejected) in `job_actions.application_status`. The header shows when emails were last checked. A single password (`APP_PASSWORD`) protects everything: `proxy.ts` redirects to the login page without a valid session cookie, and every server action checks the session again.
 
 **Backfill:** move a source's watermark back in time, then run the pipeline as usual:
 

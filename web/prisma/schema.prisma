@@ -17,10 +17,11 @@ model ingestion_state {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_actions {
-  job_id   String   @id @db.Uuid
-  action   String
-  acted_at DateTime @default(now()) @db.Timestamptz(6)
-  jobs     jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job_id             String   @id @db.Uuid
+  action             String
+  acted_at           DateTime @default(now()) @db.Timestamptz(6)
+  application_status String?
+  jobs               jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -41,15 +42,16 @@ model job_details {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job_scores {
-  job_id     String   @id @db.Uuid
-  score      Int      @db.SmallInt
-  role       Float    @db.Real
-  seniority  Float    @db.Real
-  work_style Float    @db.Real
-  stack      Float    @db.Real
-  salary     Float    @db.Real
-  scored_at  DateTime @default(now()) @db.Timestamptz(6)
-  jobs       jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  job_id       String   @id @db.Uuid
+  score        Int      @db.SmallInt
+  role         Float    @db.Real
+  seniority    Float    @db.Real
+  work_style   Float    @db.Real
+  stack        Float    @db.Real
+  salary       Float    @db.Real
+  scored_at    DateTime @default(now()) @db.Timestamptz(6)
+  technologies String[] @default([])
+  jobs         jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
