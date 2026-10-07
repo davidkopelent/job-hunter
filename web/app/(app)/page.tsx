@@ -107,7 +107,7 @@ function Section({ label, jobs }: { label: string; jobs: Job[] }) {
       <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         {label}
         <span className="rounded-full bg-secondary px-2 py-px text-[11px] tracking-normal tabular">{jobs.length}</span>
-        <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+        <span className="h-px flex-1 bg-border" />
       </h2>
       <div className="grid gap-3">
         {jobs.map((job, i) => (

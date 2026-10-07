@@ -7,7 +7,7 @@ export default function LoginPage() {
       <div className="flex flex-col items-center gap-4 text-center">
         <Brand />
         <h1 className="text-3xl leading-tight font-bold tracking-tight">
-          Welcome <span className="text-gradient">back</span>
+          Welcome <span className="text-primary">back</span>
         </h1>
       </div>
       <div className="card-surface p-6">

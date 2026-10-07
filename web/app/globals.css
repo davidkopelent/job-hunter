@@ -72,12 +72,11 @@
   --border: oklch(0.93 0.01 255);
   --input: oklch(0.92 0.012 255);
   --ring: #0000ff;
-  --sidebar: transparent;
+  --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.35 0.025 255);
-  --sidebar-accent: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.014 255);
   --sidebar-accent-foreground: oklch(0.22 0.02 255);
   --sidebar-border: oklch(0.93 0.01 255);
-  --brand-gradient: linear-gradient(135deg, #0000ff, #0096ff);
 }
 
 @layer base {
@@ -86,12 +85,6 @@
   }
   body {
     background-color: var(--color-background);
-    /* Two soft glows at the top of the page. */
-    background-image:
-      radial-gradient(56rem 28rem at 10% -8rem, rgb(0 150 255 / 12%), transparent 70%),
-      radial-gradient(48rem 26rem at 100% -6rem, rgb(0 0 255 / 6%), transparent 70%);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -103,16 +96,6 @@
   background-color: var(--color-card);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
-}
-
-@utility text-gradient {
-  background-image: var(--brand-gradient);
-  background-clip: text;
-  color: transparent;
-}
-
-@utility bg-brand {
-  background-image: var(--brand-gradient);
 }
 
 @utility tabular {

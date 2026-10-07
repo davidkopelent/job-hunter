@@ -41,7 +41,7 @@ export function SidebarNav({ counts = {}, pathname = null }: { counts?: NavCount
           className={cn(
             "group/nav flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-sidebar-foreground transition-all hover:bg-sidebar-accent/70",
             isActive(item.href, pathname) &&
-              "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[var(--shadow-card)] hover:bg-sidebar-accent",
+              "bg-sidebar-accent font-medium text-sidebar-accent-foreground hover:bg-sidebar-accent",
           )}
         >
           <item.icon
