@@ -66,14 +66,15 @@ export function SidebarNav({ counts = {}, pathname = null }: { counts?: NavCount
 
 export function BottomNav({ pathname = null }: { pathname?: string | null }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border/60 bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+    // Floating pill above the home indicator, like an iOS tab bar.
+    <nav className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 grid grid-cols-4 gap-1 rounded-full border border-border/60 bg-background/75 p-1.5 shadow-[var(--shadow-card-hover)] backdrop-blur-xl backdrop-saturate-150 md:hidden">
       {NAV.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           className={cn(
-            "flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground transition-colors",
-            isActive(item.href, pathname) && "font-medium text-primary",
+            "flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] text-muted-foreground transition-colors active:scale-95",
+            isActive(item.href, pathname) && "bg-primary/10 font-medium text-primary",
           )}
         >
           <item.icon className="size-4" />

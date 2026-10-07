@@ -83,6 +83,12 @@
   * {
     border-color: var(--color-border);
   }
+  /* Tailwind v4 no longer gives buttons a pointer cursor. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

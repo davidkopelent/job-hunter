@@ -10,7 +10,7 @@ import { getStats } from "@/lib/jobs";
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl md:hidden">
+      <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center pt-[env(safe-area-inset-top)] justify-between border-b border-border/60 bg-background/70 px-4 backdrop-blur-xl md:hidden">
         <Link href="/" aria-label="JobHunter home">
           <Brand />
         </Link>
@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Left padding clears the panel (15rem + 2 × 0.75rem gap). The right padding mirrors it once the
           window fits a max-w-4xl page (56rem) on top, so the page is centered on the window, not beside the panel. */}
-      <main className="pb-20 md:pb-0 md:pl-[16.5rem] md:pr-[clamp(0px,calc(100%_-_72.5rem),16.5rem)]">{children}</main>
+      <main className="pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-[16.5rem] md:pr-[clamp(0px,calc(100%_-_72.5rem),16.5rem)]">{children}</main>
 
       <Suspense fallback={<BottomNav />}>
         <ActiveBottomNav />
