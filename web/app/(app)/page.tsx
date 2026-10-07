@@ -23,7 +23,7 @@ export default function FeedPage({ searchParams }: PageProps<"/">) {
         }
       />
 
-      <Suspense fallback={<div className="mt-6 h-[66px] rounded-xl border bg-card" />}>
+      <Suspense fallback={<div className="mt-6 h-[88px]" />}>
         <Stats />
       </Suspense>
 
@@ -55,18 +55,21 @@ async function Summary() {
 
 async function Stats() {
   const stats = await getStats();
-  const cells: [string, number][] = [
-    ["New", stats.new],
-    ["Relevant", stats.relevant],
-    ["Saved", stats.saved],
-    ["Applied", stats.applied],
+  const cells: [string, number, string][] = [
+    ["New", stats.new, "bg-primary"],
+    ["Relevant", stats.relevant, "bg-success"],
+    ["Saved", stats.saved, "bg-warning"],
+    ["Applied", stats.applied, "bg-[#0096ff]"],
   ];
   return (
-    <div className="mt-6 grid grid-cols-4 divide-x rounded-xl border bg-card">
-      {cells.map(([label, n]) => (
-        <div key={label} className="px-4 py-3">
-          <div className="font-mono text-xl font-semibold tabular">{n}</div>
-          <div className="text-xs text-muted-foreground">{label}</div>
+    <div className="mt-6 grid grid-cols-4 gap-2 md:gap-3">
+      {cells.map(([label, n, dot]) => (
+        <div key={label} className="card-surface px-3 py-3 md:px-4">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={`size-1.5 rounded-full ${dot}`} />
+            {label}
+          </div>
+          <div className="mt-1 text-2xl leading-none font-bold tracking-tight tabular md:text-3xl">{n}</div>
         </div>
       ))}
     </div>
@@ -90,7 +93,7 @@ async function FeedList({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
   const top = jobs.filter((job) => job.job_scores!.score >= RELEVANT_SCORE);
   const rest = jobs.filter((job) => job.job_scores!.score < RELEVANT_SCORE);
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <Section label="Worth your time" jobs={top} />
       <Section label="Other matches" jobs={rest} />
     </div>
@@ -101,8 +104,10 @@ function Section({ label, jobs }: { label: string; jobs: Job[] }) {
   if (jobs.length === 0) return null;
   return (
     <section>
-      <h2 className="mb-3 flex items-center gap-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-        {label} <span className="font-mono">{jobs.length}</span>
+      <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+        {label}
+        <span className="rounded-full bg-secondary px-2 py-px text-[11px] tracking-normal tabular">{jobs.length}</span>
+        <span className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
       </h2>
       <div className="grid gap-3">
         {jobs.map((job, i) => (

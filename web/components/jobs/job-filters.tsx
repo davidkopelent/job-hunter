@@ -11,11 +11,11 @@ const WORK_STYLE_LABELS: Record<string, string> = { remote: "Remote", hybrid: "H
 
 const chip = (active: boolean) =>
   cn(
-    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border bg-card px-2.5 text-[13px] font-medium transition-colors hover:bg-accent",
-    active && "border-foreground/20",
+    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-card px-3.5 text-[13px] font-medium shadow-[var(--shadow-card)] transition-colors hover:bg-accent",
+    active && "bg-primary/[0.06] text-primary ring-1 ring-primary/25 hover:bg-primary/10",
   );
 
-const option = "flex w-full items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent";
+const option = "flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-sm hover:bg-accent [&_svg]:text-primary";
 
 // Filters live in the URL (?q=&ws=&min=&sort=); the feed page reads them on the server.
 export function JobFilters() {
@@ -38,8 +38,8 @@ export function JobFilters() {
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center">
-      <div className="relative md:w-64">
-        <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative md:w-72">
+        <Search className="absolute top-1/2 left-3.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => {
@@ -48,7 +48,7 @@ export function JobFilters() {
             typing.current = setTimeout(() => update("q", e.target.value.trim()), 300);
           }}
           placeholder="Search title or company..."
-          className="h-8 w-full rounded-md border bg-card pr-3 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/30"
+          className="h-9 w-full rounded-full bg-card pr-4 pl-9 text-sm shadow-[var(--shadow-card)] transition-shadow outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
         />
       </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 md:pb-0">
@@ -56,11 +56,11 @@ export function JobFilters() {
           <PopoverTrigger className={chip(workStyles.length > 0)}>
             Work style
             {workStyles.length > 0 && (
-              <span className="rounded bg-primary px-1 font-mono text-[10px] text-primary-foreground">{workStyles.length}</span>
+              <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground tabular">{workStyles.length}</span>
             )}
             <ChevronDown className="size-3.5 opacity-60" />
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-44 gap-0 p-1">
+          <PopoverContent align="start" className="w-44 gap-0 rounded-xl p-1">
             {WORK_STYLES.map((style) => {
               const on = workStyles.includes(style);
               return (
@@ -112,7 +112,7 @@ function Single({
         <span className="text-muted-foreground">{label}</span> {current}
         <ChevronDown className="size-3.5 opacity-60" />
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-40 gap-0 p-1">
+      <PopoverContent align="start" className="w-40 gap-0 rounded-xl p-1">
         {options.map(([key, text]) => (
           <button key={key} onClick={() => onChange(key)} className={option}>
             {text}

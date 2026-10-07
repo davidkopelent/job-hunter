@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Design: davidkopelent/pixel-perfect (light only). */
+/* Design: davidkopelent/pixel-perfect layout, airy blue-tinted visuals (light only). */
 
 @theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -42,41 +42,42 @@
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
-  --shadow-card: 0 1px 2px oklch(0.2 0.01 260 / 4%), 0 0 0 1px oklch(0.2 0.01 260 / 6%);
-  --shadow-card-hover: 0 4px 16px -4px oklch(0.2 0.01 260 / 10%), 0 0 0 1px oklch(0.2 0.01 260 / 10%);
+  --shadow-card: 0 1px 2px oklch(0.3 0.06 255 / 4%), 0 0 0 1px oklch(0.3 0.06 255 / 5%), 0 8px 24px -14px oklch(0.3 0.08 255 / 12%);
+  --shadow-card-hover: 0 1px 2px oklch(0.3 0.06 255 / 4%), 0 0 0 1px oklch(0.5 0.15 255 / 14%), 0 16px 40px -16px oklch(0.4 0.12 255 / 22%);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0.002 260);
-  --foreground: oklch(0.2 0.01 260);
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.004 255);
+  --foreground: oklch(0.22 0.02 255);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 260);
+  --card-foreground: oklch(0.22 0.02 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 260);
-  --primary: oklch(0.22 0.01 260);
+  --popover-foreground: oklch(0.22 0.02 255);
+  --primary: #0000ff;
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.96 0.003 260);
-  --secondary-foreground: oklch(0.25 0.01 260);
-  --muted: oklch(0.955 0.003 260);
-  --muted-foreground: oklch(0.52 0.012 260);
-  --accent: oklch(0.95 0.004 260);
-  --accent-foreground: oklch(0.22 0.01 260);
-  --destructive: oklch(0.58 0.2 27);
+  --secondary: oklch(0.965 0.008 255);
+  --secondary-foreground: oklch(0.3 0.03 255);
+  --muted: oklch(0.965 0.008 255);
+  --muted-foreground: oklch(0.54 0.025 255);
+  --accent: oklch(0.96 0.014 255);
+  --accent-foreground: oklch(0.22 0.02 255);
+  --destructive: oklch(0.6 0.2 22);
   --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.56 0.14 152);
-  --success-soft: oklch(0.96 0.04 152);
-  --warning: oklch(0.64 0.14 70);
-  --warning-soft: oklch(0.97 0.045 85);
-  --link: oklch(0.52 0.19 262);
-  --border: oklch(0.92 0.004 260);
-  --input: oklch(0.91 0.004 260);
-  --ring: oklch(0.52 0.19 262);
-  --sidebar: oklch(0.975 0.002 260);
-  --sidebar-foreground: oklch(0.3 0.01 260);
-  --sidebar-accent: oklch(0.93 0.004 260);
-  --sidebar-accent-foreground: oklch(0.2 0.01 260);
-  --sidebar-border: oklch(0.92 0.004 260);
+  --success: oklch(0.56 0.14 160);
+  --success-soft: oklch(0.96 0.045 165);
+  --warning: oklch(0.63 0.15 58);
+  --warning-soft: oklch(0.97 0.05 80);
+  --link: #0000ff;
+  --border: oklch(0.93 0.01 255);
+  --input: oklch(0.92 0.012 255);
+  --ring: #0000ff;
+  --sidebar: transparent;
+  --sidebar-foreground: oklch(0.35 0.025 255);
+  --sidebar-accent: oklch(1 0 0);
+  --sidebar-accent-foreground: oklch(0.22 0.02 255);
+  --sidebar-border: oklch(0.93 0.01 255);
+  --brand-gradient: linear-gradient(135deg, #0000ff, #0096ff);
 }
 
 @layer base {
@@ -85,6 +86,12 @@
   }
   body {
     background-color: var(--color-background);
+    /* Two soft glows at the top of the page. */
+    background-image:
+      radial-gradient(56rem 28rem at 10% -8rem, rgb(0 150 255 / 12%), transparent 70%),
+      radial-gradient(48rem 26rem at 100% -6rem, rgb(0 0 255 / 6%), transparent 70%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
@@ -98,12 +105,22 @@
   box-shadow: var(--shadow-card);
 }
 
+@utility text-gradient {
+  background-image: var(--brand-gradient);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-brand {
+  background-image: var(--brand-gradient);
+}
+
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 @utility animate-rise {

@@ -3,7 +3,7 @@ export function JobTags({ tags }: { tags: string[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {tags.map((tag) => (
-        <span key={tag} className="rounded-md border border-border bg-secondary px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+        <span key={tag} className="rounded-full bg-primary/[0.07] px-2.5 py-0.5 text-xs font-medium text-primary">
           {tag}
         </span>
       ))}

@@ -33,20 +33,30 @@ export function ActiveBottomNav() {
 
 export function SidebarNav({ counts = {}, pathname = null }: { counts?: NavCounts; pathname?: string | null }) {
   return (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-col gap-1">
       {NAV.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           className={cn(
-            "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent",
-            isActive(item.href, pathname) && "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+            "group/nav flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-sidebar-foreground transition-all hover:bg-sidebar-accent/70",
+            isActive(item.href, pathname) &&
+              "bg-sidebar-accent font-medium text-sidebar-accent-foreground shadow-[var(--shadow-card)] hover:bg-sidebar-accent",
           )}
         >
-          <item.icon className="size-4 opacity-70" />
+          <item.icon
+            className={cn("size-4 opacity-60", isActive(item.href, pathname) && "text-primary opacity-100")}
+          />
           {item.label}
           {counts[item.href] ? (
-            <span className="ml-auto font-mono text-[11px] text-muted-foreground">{counts[item.href]}</span>
+            <span
+              className={cn(
+                "ml-auto rounded-full bg-secondary px-2 py-px text-[11px] font-medium tabular text-muted-foreground",
+                isActive(item.href, pathname) && "bg-primary/10 text-primary",
+              )}
+            >
+              {counts[item.href]}
+            </span>
           ) : null}
         </Link>
       ))}
@@ -56,14 +66,14 @@ export function SidebarNav({ counts = {}, pathname = null }: { counts?: NavCount
 
 export function BottomNav({ pathname = null }: { pathname?: string | null }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t bg-background/95 backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border/60 bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
       {NAV.map((item) => (
         <Link
           key={item.href}
           href={item.href}
           className={cn(
-            "flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground",
-            isActive(item.href, pathname) && "font-medium text-foreground",
+            "flex flex-col items-center gap-0.5 py-2 text-[11px] text-muted-foreground transition-colors",
+            isActive(item.href, pathname) && "font-medium text-primary",
           )}
         >
           <item.icon className="size-4" />

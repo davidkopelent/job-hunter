@@ -2,7 +2,7 @@ import { Clock, MapPin, Wallet } from "lucide-react";
 import Link from "next/link";
 import { JobActions } from "@/components/jobs/job-actions";
 import { placeAndWorkStyle, SOURCE_NAMES } from "@/components/jobs/job-meta";
-import { JobScore } from "@/components/jobs/job-score";
+import { JobScore, Meter } from "@/components/jobs/job-score";
 import { JobTags } from "@/components/jobs/job-tags";
 import type { Action, Job } from "@/lib/jobs";
 import { SUB_SCORES } from "@/lib/score";
@@ -15,19 +15,21 @@ export function JobCard({ job, index = 0, note }: { job: Job; index?: number; no
 
   return (
     <article
-      className="group card-surface animate-rise relative p-5 transition-shadow hover:shadow-[var(--shadow-card-hover)]"
+      className="group card-surface animate-rise relative p-5 transition-shadow hover:shadow-[var(--shadow-card-hover)] md:p-6"
       style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
     >
       <div className="flex items-start justify-between gap-4">
         <JobScore score={scores.score} />
-        <span className="text-xs text-muted-foreground">{SOURCE_NAMES[job.source] ?? job.source}</span>
+        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {SOURCE_NAMES[job.source] ?? job.source}
+        </span>
       </div>
 
-      <Link href={`/jobs/${job.id}`} className="mt-3 block">
-        <h3 className="text-[17px] font-semibold tracking-tight decoration-border underline-offset-4 group-hover:underline">
+      <Link href={`/jobs/${job.id}`} className="mt-4 block">
+        <h3 className="text-lg font-semibold tracking-tight transition-colors group-hover:text-primary">
           {details.title}
         </h3>
-        <p className="text-sm text-muted-foreground">{details.company}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{details.company}</p>
       </Link>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
@@ -36,7 +38,7 @@ export function JobCard({ job, index = 0, note }: { job: Job; index?: number; no
           {placeAndWorkStyle(job)}
         </span>
         {details.salary && (
-          <span className="flex items-center gap-1.5 text-foreground">
+          <span className="flex items-center gap-1.5 font-medium text-foreground">
             <Wallet className="size-3.5 text-muted-foreground" />
             {details.salary}
           </span>
@@ -53,17 +55,19 @@ export function JobCard({ job, index = 0, note }: { job: Job; index?: number; no
         </div>
       )}
 
-      <p className="mt-3 text-[13px] text-muted-foreground">
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
         {SUB_SCORES.map(({ key, label }) => (
-          <span key={key} className="mr-3 inline-block">
-            {label} <span className="font-mono text-foreground">{Math.round(scores[key] * 100)}%</span>
+          <span key={key} className="inline-flex items-center gap-2">
+            {label}
+            <Meter value={scores[key]} className="h-1 w-8" />
+            <span className="font-medium text-foreground tabular">{Math.round(scores[key] * 100)}%</span>
           </span>
         ))}
-      </p>
+      </div>
 
       {note && <p className="mt-3 text-xs text-muted-foreground">{note}</p>}
 
-      <div className="mt-4">
+      <div className="mt-5 border-t border-border/70 pt-4">
         <JobActions
           job={{ id: job.id, url: job.url, title: details.title ?? "", company: details.company ?? "" }}
           current={(job.job_actions?.action ?? null) as Action | null}
