@@ -20,14 +20,15 @@ UPSERT_SCORE = """
 
 def score(conn) -> None:
     jobs = conn.execute("""
-        select job_id, title, location, work_style, salary, description from job_details
+        select job_id, title, location, work_style, salary_max::float8, salary_currency, salary_period, description
+        from job_details
         where not closed
     """).fetchall()
 
     # Every run rescores everything, so rule changes apply to all jobs.
     with conn.transaction():
-        for job_id, title, location, work_style, salary, description in jobs:
-            scores = rules.score(title, location, work_style, salary, description)
+        for job_id, *details in jobs:
+            scores = rules.score(*details)
             conn.execute(UPSERT_SCORE, {"job_id": job_id, **scores})
 
     print(f"scored {len(jobs)} jobs")

@@ -7,6 +7,10 @@ session.headers["User-Agent"] = (
 )
 
 
+# Currency symbols on listing pages → ISO 4217 codes.
+CURRENCY_SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP", "₹": "INR", "Kč": "CZK"}
+
+
 def clean(text: str | None) -> str | None:
     """Collapse whitespace; empty becomes None."""
     return " ".join((text or "").split()) or None

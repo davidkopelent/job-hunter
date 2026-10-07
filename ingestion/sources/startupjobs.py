@@ -15,18 +15,14 @@ JOB_ID_PATTERN = re.compile(r'href="https://www\.startupjobs\.cz/nabidka/(\d+)/'
 
 def parse_jobs(email: Email) -> list[Job]:
     return [
-        Job(SOURCE, source_id, job_url(source_id), email.received_at)
+        # Redirects to the full URL with the slug.
+        Job(SOURCE, source_id, f"https://www.startupjobs.cz/nabidka/{source_id}", email.received_at)
         for source_id in JOB_ID_PATTERN.findall(email.body)
     ]
 
 
-def job_url(source_id: str) -> str:
-    # Redirects to the full URL with the slug.
-    return f"https://www.startupjobs.cz/nabidka/{source_id}"
-
-
-def fetch_details(source_id: str) -> JobDetails:
-    response = session.get(job_url(source_id))
+def fetch_details(source_id: str, url: str) -> JobDetails:
+    response = session.get(url)
     if response.status_code == 404:
         return JobDetails(closed=True)
     response.raise_for_status()
@@ -48,7 +44,7 @@ def fetch_details(source_id: str) -> JobDetails:
         company=clean(posting["hiringOrganization"]["name"]),
         location=location(posting),
         work_style=work_style(page),
-        salary=salary(posting),
+        **salary(posting),
         description=BeautifulSoup(posting["description"], "html.parser").get_text("\n", strip=True),
     )
 
@@ -66,9 +62,16 @@ def work_style(page: BeautifulSoup) -> list[str] | None:
     return [link["href"].split("pracovni-rezim=")[1] for link in links] or None
 
 
-def salary(posting: dict) -> str | None:
+def salary(posting: dict) -> dict:
     if "baseSalary" not in posting:
-        return None
+        return {}
     amount = posting["baseSalary"]
     value = amount["value"]
-    return f"{value['minValue']}–{value['maxValue']} {amount['currency']}/{value['unitText'].lower()}"
+    period = value["unitText"].lower()
+    return {
+        "salary": f"{value['minValue']}–{value['maxValue']} {amount['currency']}/{period}",
+        "salary_min": value["minValue"],
+        "salary_max": value["maxValue"],
+        "salary_currency": amount["currency"],
+        "salary_period": period,
+    }
