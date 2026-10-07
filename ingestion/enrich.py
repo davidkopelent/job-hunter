@@ -14,10 +14,13 @@ from ingestion.sources import SOURCES
 FETCH_DELAY_SECONDS = 1
 
 INSERT_DETAILS = """
-    insert into job_details (job_id, closed, title, company, location, work_style, salary, description)
+    insert into job_details (
+        job_id, closed, title, company, location, work_style,
+        salary, salary_min, salary_max, salary_currency, salary_period, description
+    )
     values (
-        %(job_id)s, %(closed)s, %(title)s, %(company)s, %(location)s,
-        %(work_style)s, %(salary)s, %(description)s
+        %(job_id)s, %(closed)s, %(title)s, %(company)s, %(location)s, %(work_style)s,
+        %(salary)s, %(salary_min)s, %(salary_max)s, %(salary_currency)s, %(salary_period)s, %(description)s
     )
 """
 
@@ -27,12 +30,12 @@ def enrich(conn) -> None:
     rate_limited = set()
     enriched = 0
 
-    for job_id, source, source_id, email_work_style in pending:
+    for job_id, source, source_id, url, email_work_style in pending:
         if source in rate_limited:
             continue
 
         try:
-            details = SOURCES[source].fetch_details(source_id)
+            details = SOURCES[source].fetch_details(source_id, url)
         except requests.HTTPError as error:
             if error.response.status_code != 429:
                 raise
@@ -50,9 +53,9 @@ def enrich(conn) -> None:
     print(f"enriched {enriched} of {len(pending)} pending jobs")
 
 
-def get_pending_jobs(conn) -> list[tuple[UUID, str, str, list[str] | None]]:
+def get_pending_jobs(conn) -> list[tuple[UUID, str, str, str, list[str] | None]]:
     return conn.execute("""
-        select id, source, source_id, email_work_style from jobs
+        select id, source, source_id, url, email_work_style from jobs
         where not exists (select 1 from job_details where job_id = jobs.id)
         order by discovered_at
     """).fetchall()

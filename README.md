@@ -13,6 +13,7 @@ flowchart LR
     subgraph Sources
         LI[LinkedIn job alert emails]
         SJ[StartupJobs emails]
+        WF[Wellfound emails]
     end
 
     subgraph Discover [1 · Discover]
@@ -31,6 +32,7 @@ flowchart LR
 
     LI --> F
     SJ --> F
+    WF --> F
     F --> P -->|upsert| J
     J --> E --> D
     D --> S --> UI
@@ -41,7 +43,7 @@ flowchart LR
 | Table | Written by | Contents |
 | --- | --- | --- |
 | `jobs` | discovery | `source`, `source_id`, `url`, `discovered_at` (when the first email mentioning it arrived), `email_work_style` |
-| `job_details` | enrichment | `title`, `company`, `location`, `work_style`, `salary`, `description`, `closed`, `fetched_at` |
+| `job_details` | enrichment | `title`, `company`, `location`, `work_style`, `salary` (as shown, for display), `salary_min` / `salary_max` / `salary_currency` / `salary_period` (parsed, for scoring), `description`, `closed`, `fetched_at` |
 | `ingestion_state` | discovery | watermark for each source |
 
 `(source, source_id)` is the job's identity, for example `linkedin` / `4473329863`. The database enforces it with a unique constraint.
@@ -52,6 +54,7 @@ Each source module handles both stages:
 | --- | --- | --- |
 | LinkedIn | job alert emails (`jobalerts-noreply@linkedin.com`), plus the work style marker from the card | public guest endpoint (HTML) |
 | StartupJobs | `jobot@startupjobs.cz` emails | schema.org `JobPosting` JSON-LD embedded in the page, work style tags |
+| Wellfound | `team@hi.wellfound.com` digests (plain-text part; the HTML part only has tracking redirects) | listing page HTML (only about half embed JSON-LD), side-panel "Remote Work Policy" |
 
 `work_style` is a list of `onsite` / `hybrid` / `remote`, because a job may allow several; `null` means unknown. It comes from the listing page when the page shows it. LinkedIn hides it from logged-out visitors, so for LinkedIn it comes from the email card ("Praha (Hybrid)"). That's the one detail taken from an email, and it's deliberate: scraping LinkedIn with a logged-in session would risk your account.
 
@@ -91,7 +94,8 @@ job-hunter/
 │   ├── models.py            # Email, Job, JobDetails
 │   └── sources/             # one module per source: email parsing + listing page details
 │       ├── linkedin.py
-│       └── startupjobs.py
+│       ├── startupjobs.py
+│       └── wellfound.py
 ├── scoring/
 │   ├── rules.py             # preferences + deterministic rules → sub-scores
 │   └── score.py             # scoring stage: job_details → job_scores
@@ -227,13 +231,13 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 1. Create `ingestion/sources/<source>.py` exposing:
    - `SOURCE`, `GMAIL_QUERY`, `MIME_TYPE`
    - `parse_jobs(email) -> list[Job]`: jobs found in an email (ID, canonical URL, plus any hint only the email has)
-   - `fetch_details(source_id) -> JobDetails`: details from the listing page (prefer schema.org JSON-LD when the page has it)
+   - `fetch_details(source_id, url) -> JobDetails`: details from the listing page (prefer schema.org JSON-LD when the page has it)
 2. Add the module to `SOURCES` in `ingestion/sources/__init__.py`.
 3. Add a migration that inserts its watermark row into `ingestion_state` (`now()` = start from today).
 
 ## Roadmap
 
-- [x] Job discovery from LinkedIn and StartupJobs emails
+- [x] Job discovery from LinkedIn, StartupJobs and Wellfound emails
 - [x] Persistence in Supabase with idempotent upserts
 - [x] Incremental loading with watermarks
 - [x] Enrichment from listing pages (details, work style, salary, description, closed listings)

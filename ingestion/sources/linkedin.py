@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 
 from ingestion.models import Email, Job, JobDetails
-from ingestion.scraping import clean, session
+from ingestion.scraping import CURRENCY_SYMBOLS, clean, session
 
 SOURCE = "linkedin"
 GMAIL_QUERY = "from:(jobalerts-noreply@linkedin.com)"
@@ -15,6 +15,10 @@ JOB_ID_PATTERN = re.compile(r"/comm/jobs/view/(\d+)")
 # Logged-out listing pages don't show work style, so the email is the only place to read it.
 WORK_STYLE_PATTERN = re.compile(r"\((On-site|Hybrid|Remote)\)$")
 WORK_STYLES = {"On-site": "onsite", "Hybrid": "hybrid", "Remote": "remote"}
+
+# Salary like "€35,000.00/yr - €45,000.00/yr" or "CZK50,000.00/mo"; the currency is a symbol or a code.
+AMOUNT_PATTERN = re.compile(r"([^\d\s-]+)\s?([\d,]+(?:\.\d+)?)/(\w+)")
+PERIODS = {"hr": "hour", "day": "day", "mo": "month", "yr": "year"}
 
 
 def parse_jobs(email: Email) -> list[Job]:
@@ -38,7 +42,7 @@ def parse_jobs(email: Email) -> list[Job]:
     return jobs
 
 
-def fetch_details(source_id: str) -> JobDetails:
+def fetch_details(source_id: str, url: str) -> JobDetails:
     # Public "guest" endpoint: the listing page without login.
     response = session.get(f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{source_id}")
     if response.status_code == 404:
@@ -58,6 +62,21 @@ def fetch_details(source_id: str) -> JobDetails:
         title=clean(text(".top-card-layout__title")),
         company=clean(text(".topcard__org-name-link")),
         location=clean(text(".topcard__flavor--bullet:not(.num-applicants__figure)")),
-        salary=clean(text(".compensation__salary")),
+        **salary(clean(text(".compensation__salary"))),
         description=description and description.get_text("\n", strip=True),
     )
+
+
+def salary(text: str | None) -> dict:
+    if not text:
+        return {}
+    amounts = AMOUNT_PATTERN.findall(text)
+    currency, _, period = amounts[0]
+    values = [float(value.replace(",", "")) for _, value, _ in amounts]
+    return {
+        "salary": text,
+        "salary_min": min(values),
+        "salary_max": max(values),
+        "salary_currency": CURRENCY_SYMBOLS.get(currency, currency),
+        "salary_period": PERIODS[period],
+    }

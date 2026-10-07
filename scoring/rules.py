@@ -53,9 +53,7 @@ UNKNOWN = 0.5
 # Stated salaries below this score 0. Few listings state one, so salary only nudges the total.
 SALARY_FLOOR_CZK_MONTH = 60_000
 CZK_PER = {"CZK": 1, "EUR": 25, "USD": 23, "GBP": 29}
-CURRENCIES = {r"czk|kč": "CZK", r"€|eur": "EUR", r"\$|usd": "USD", r"£|gbp": "GBP"}
-MONTHS_PER = {r"/\s*(yr|year)|annual|ročně": 1 / 12, r"/\s*(mo|month)|měsíc": 1,
-              r"/\s*(hr|hour)|hodin": 160, r"/\s*(day|md)\b": 20}
+MONTHS_PER = {"year": 1 / 12, "month": 1, "day": 20, "hour": 160}
 
 
 def score_role(title: str) -> float:
@@ -82,22 +80,22 @@ def score_work_style(work_style: list[str] | None, location: str | None) -> floa
     return max(WORK_STYLE[style] for style in work_style)
 
 
-def score_salary(salary: str | None) -> float:
-    if not salary:
+def score_salary(salary_max: float | None, currency: str | None, period: str | None) -> float:
+    # Currencies without a rate (Wellfound lists e.g. INR) count as not stated.
+    if salary_max is None or currency not in CZK_PER:
         return UNKNOWN
-    return 1 if salary_czk_month(salary) >= SALARY_FLOOR_CZK_MONTH else 0
-
-
-def salary_czk_month(salary: str) -> float:
-    """Top of the stated range in CZK per month, e.g. '€35,000.00/yr - €45,000.00/yr' → 93 750."""
-    amount = max(float(re.sub(r"[,\s]", "", n)) for n in re.findall(r"\d[\d,\s]*(?:\.\d+)?", salary))
-    currency = next(code for pattern, code in CURRENCIES.items() if re.search(pattern, salary, re.I))
-    per_month = next(factor for pattern, factor in MONTHS_PER.items() if re.search(pattern, salary, re.I))
-    return amount * CZK_PER[currency] * per_month
+    czk_month = salary_max * CZK_PER[currency] * MONTHS_PER[period]
+    return 1 if czk_month >= SALARY_FLOOR_CZK_MONTH else 0
 
 
 def score(
-    title: str, location: str | None, work_style: list[str] | None, salary: str | None, description: str | None
+    title: str,
+    location: str | None,
+    work_style: list[str] | None,
+    salary_max: float | None,
+    salary_currency: str | None,
+    salary_period: str | None,
+    description: str | None,
 ) -> dict:
     technologies = match_stack(f"{title} {description or ''}")
     scores = {
@@ -105,7 +103,7 @@ def score(
         "work_style": score_work_style(work_style, location),
         "stack": score_stack(technologies),
         "seniority": score_seniority(title),
-        "salary": score_salary(salary),
+        "salary": score_salary(salary_max, salary_currency, salary_period),
     }
     total = round(sum(WEIGHTS[name] * value for name, value in scores.items()))
     return {**scores, "score": total, "technologies": technologies}
