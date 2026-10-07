@@ -101,12 +101,15 @@ job-hunter/
 │   └── score.py             # scoring stage: job_details → job_scores
 ├── supabase/
 │   └── migrations/          # SQL migrations, applied in order
+├── tests/                   # pytest: source parsers + scoring rules
+│   └── fixtures/            # saved listing pages, served instead of the network
 ├── web/                     # Next.js feed (deployed on Vercel)
 │   ├── app/                 # feed page, login, server actions
 │   ├── lib/                 # Prisma client, feed queries, auth
 │   ├── prisma/              # schema.prisma, pulled from the database
 │   └── proxy.ts             # password protection
-└── requirements.txt
+├── requirements.txt
+└── requirements-dev.txt     # + pytest
 ```
 
 ## Setup
@@ -116,7 +119,8 @@ job-hunter/
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps + pytest
+pytest                                # no network or database needed
 ```
 
 ### 2. Gmail
@@ -234,6 +238,7 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
    - `fetch_details(source_id, url) -> JobDetails`: details from the listing page (prefer schema.org JSON-LD when the page has it)
 2. Add the module to `SOURCES` in `ingestion/sources/__init__.py`.
 3. Add a migration that inserts its watermark row into `ingestion_state` (`now()` = start from today).
+4. Add `tests/test_<source>.py`: an inline email snippet for `parse_jobs`, and a saved listing page in `tests/fixtures/` for `fetch_details` (one per page layout, plus the closed status code).
 
 ## Roadmap
 

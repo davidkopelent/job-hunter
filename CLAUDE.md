@@ -27,7 +27,7 @@ Incremental loading: `ingestion_state.last_email_at` is a watermark for each sou
 
 Enrichment processes every job with no `job_details` row, 1 s apart. On a 429 it skips that source until the next run. StartupJobs: schema.org `JobPosting` JSON-LD (missing = closed) + `pracovni-rezim=` tag links for work style. LinkedIn: guest endpoint `jobs-guest/jobs/api/jobPosting/<id>` HTML (`.closed-job` = closed). Wellfound: the plain-text email part links `job_listing_slug=<id>-<slug>` (the HTML part only has tracking redirects); the listing page needs the slug and is parsed from HTML (only about half embed JSON-LD): `h1`, side-panel sections "Job Location" / "Remote Work Policy" / "Hires remotely in", `#job-description`; 410 = closed. A 404 = closed. To re-fetch, delete the `job_details` rows. Probe LinkedIn sparingly; it rate-limits quickly.
 
-Adding a source means writing a source module, adding it to `SOURCES`, and adding its `ingestion_state` row in a new migration.
+Adding a source means writing a source module, adding it to `SOURCES`, adding its `ingestion_state` row in a new migration, and adding `tests/test_<source>.py`.
 
 ## Web app (`web/`)
 
@@ -55,6 +55,13 @@ Next.js 16 with Cache Components, so read `web/AGENTS.md` and the bundled docs i
 ## Stack
 
 Python ingestion · Supabase Postgres · Supabase CLI migrations · Next.js + TypeScript + Tailwind + shadcn/ui + Prisma (queries only) · GitHub Actions cron (`.github/workflows/ingest.yml`, every 4 h; secrets `DATABASE_URL`, `GMAIL_ADDRESS`, `GMAIL_APP_PASSWORD`) · deterministic scoring, no LLM for now.
+
+## Tests
+
+`pytest` (from the repo root; `pip install -r requirements-dev.txt`). Plain test functions, no network, no database:
+- Listing pages are real pages saved in `tests/fixtures/<name>.html`; the `serve` fixture patches the shared `session.get` to return one (or a status code, for closed listings). When a site changes its layout, save a fresh page as a new fixture and assert on it.
+- Emails are short inline snippets in each test, never real emails (they hold personal data and unsubscribe tokens).
+- CI: `.github/workflows/test.yml` runs on every push.
 
 ## Code style
 
