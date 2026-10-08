@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { JobActions } from "@/components/jobs/job-actions";
+import { JobDescription } from "@/components/jobs/job-description";
 import { placeAndWorkStyle, SOURCE_NAMES } from "@/components/jobs/job-meta";
 import { JobScore, Meter } from "@/components/jobs/job-score";
 import { JobTags } from "@/components/jobs/job-tags";
@@ -101,7 +102,7 @@ async function JobDetail({ params }: Pick<PageProps<"/jobs/[id]">, "params">) {
 
       {details.description && (
         <Block title="Job description">
-          <div className="text-sm leading-relaxed whitespace-pre-line text-foreground/85">{details.description}</div>
+          <JobDescription markdown={details.description} />
         </Block>
       )}
 

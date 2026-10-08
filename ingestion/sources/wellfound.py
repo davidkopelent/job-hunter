@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup, Tag
 
 from ingestion.models import Email, Job, JobDetails
-from ingestion.scraping import CURRENCY_SYMBOLS, clean, session
+from ingestion.scraping import CURRENCY_SYMBOLS, clean, markdown, session
 
 SOURCE = "wellfound"
 GMAIL_QUERY = "from:(team@hi.wellfound.com)"
@@ -51,7 +51,7 @@ def fetch_details(source_id: str, url: str) -> JobDetails:
         location=location(page),
         work_style=work_style(page),
         **salary(summary[0]),
-        description=page.select_one("#job-description").get_text("\n", strip=True),
+        description=markdown(page.select_one("#job-description").decode_contents()),
     )
 
 

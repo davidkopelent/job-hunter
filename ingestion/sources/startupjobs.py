@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 
 from ingestion.models import Email, Job, JobDetails
-from ingestion.scraping import clean, session
+from ingestion.scraping import clean, markdown, session
 
 SOURCE = "startupjobs"
 GMAIL_QUERY = "from:(jobot@startupjobs.cz)"
@@ -45,7 +45,7 @@ def fetch_details(source_id: str, url: str) -> JobDetails:
         location=location(posting),
         work_style=work_style(page),
         **salary(posting),
-        description=BeautifulSoup(posting["description"], "html.parser").get_text("\n", strip=True),
+        description=markdown(posting["description"]),
     )
 
 

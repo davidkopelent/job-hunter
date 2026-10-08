@@ -31,6 +31,9 @@ def test_fetch_details(serve):
     assert (details.salary_min, details.salary_max, details.salary_currency, details.salary_period) == (
         35_000, 45_000, "EUR", "year"
     )
+    # Spacer paragraphs (<p><br></p>) don't pile up blank lines.
+    assert details.description.startswith("- **Azure & Modern Data Platforms**\n- **Growing Data Team")
+    assert "**You will:**\n\n- Design, develop" in details.description
 
 
 def test_fetch_details_closed(serve):

@@ -32,7 +32,7 @@ def test_fetch_details(serve):
     assert (details.salary_min, details.salary_max, details.salary_currency, details.salary_period) == (
         165_000, 210_000, "USD", "year"
     )
-    assert details.description.startswith("About Specsight")
+    assert details.description.startswith("**About Specsight**\n\nAI changed")
 
 
 def test_fetch_details_without_json_ld(serve):

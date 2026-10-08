@@ -36,4 +36,4 @@ class JobDetails:
     salary_max: float | None = None
     salary_currency: str | None = None  # ISO 4217, e.g. "CZK"
     salary_period: str | None = None
-    description: str | None = None
+    description: str | None = None  # Markdown

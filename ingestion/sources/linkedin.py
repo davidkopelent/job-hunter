@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 
 from ingestion.models import Email, Job, JobDetails
-from ingestion.scraping import CURRENCY_SYMBOLS, clean, session
+from ingestion.scraping import CURRENCY_SYMBOLS, clean, markdown, session
 
 SOURCE = "linkedin"
 GMAIL_QUERY = "from:(jobalerts-noreply@linkedin.com)"
@@ -63,7 +63,7 @@ def fetch_details(source_id: str, url: str) -> JobDetails:
         company=clean(text(".topcard__org-name-link")),
         location=clean(text(".topcard__flavor--bullet:not(.num-applicants__figure)")),
         **salary(clean(text(".compensation__salary"))),
-        description=description and description.get_text("\n", strip=True),
+        description=description and markdown(description.decode_contents()),
     )
 
 

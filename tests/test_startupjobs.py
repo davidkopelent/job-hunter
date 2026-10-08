@@ -21,6 +21,8 @@ def test_fetch_details(serve):
     assert (details.salary_min, details.salary_max, details.salary_currency, details.salary_period) == (
         150_000, 190_000, "CZK", "month"
     )
+    # The description keeps its structure as Markdown.
+    assert "## **What Would Your Job Be Like?**\n\nAs a member of the DevOps team" in details.description
 
 
 def test_fetch_details_closed(serve):
