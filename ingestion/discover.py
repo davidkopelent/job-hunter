@@ -13,12 +13,20 @@ WATERMARK_OVERLAP = timedelta(hours=1)
 
 # Seeing a job again keeps its earliest discovery time (matters when backfilling).
 UPSERT_JOB = """
-    insert into jobs (source, source_id, url, discovered_at, email_work_style)
-    values (%(source)s, %(source_id)s, %(url)s, %(discovered_at)s, %(email_work_style)s)
+    insert into jobs (
+        source, source_id, url, discovered_at, email_work_style, email_title, email_company, email_location
+    )
+    values (
+        %(source)s, %(source_id)s, %(url)s, %(discovered_at)s,
+        %(email_work_style)s, %(email_title)s, %(email_company)s, %(email_location)s
+    )
     on conflict (source, source_id) do update set
         url = excluded.url,
         discovered_at = least(jobs.discovered_at, excluded.discovered_at),
-        email_work_style = coalesce(excluded.email_work_style, jobs.email_work_style)
+        email_work_style = coalesce(excluded.email_work_style, jobs.email_work_style),
+        email_title = coalesce(excluded.email_title, jobs.email_title),
+        email_company = coalesce(excluded.email_company, jobs.email_company),
+        email_location = coalesce(excluded.email_location, jobs.email_location)
 """
 
 

@@ -30,7 +30,7 @@ def enrich(conn) -> None:
     rate_limited = set()
     enriched = 0
 
-    for job_id, source, source_id, url, email_work_style in pending:
+    for job_id, source, source_id, url, *email in pending:
         if source in rate_limited:
             continue
 
@@ -44,8 +44,13 @@ def enrich(conn) -> None:
             rate_limited.add(source)
             continue
 
-        # The listing page wins; the email is the fallback (LinkedIn pages hide work style).
+        # The listing page wins; the email is the fallback (LinkedIn pages hide work style,
+        # Jobs.cz career sites render in the browser and show nothing).
+        email_work_style, email_title, email_company, email_location = email
         details.work_style = details.work_style or email_work_style
+        details.title = details.title or email_title
+        details.company = details.company or email_company
+        details.location = details.location or email_location
         insert_details(conn, job_id, details)
         enriched += 1
         time.sleep(FETCH_DELAY_SECONDS)
@@ -53,9 +58,9 @@ def enrich(conn) -> None:
     print(f"enriched {enriched} of {len(pending)} pending jobs")
 
 
-def get_pending_jobs(conn) -> list[tuple[UUID, str, str, str, list[str] | None]]:
+def get_pending_jobs(conn) -> list[tuple]:
     return conn.execute("""
-        select id, source, source_id, url, email_work_style from jobs
+        select id, source, source_id, url, email_work_style, email_title, email_company, email_location from jobs
         where not exists (select 1 from job_details where job_id = jobs.id)
         order by discovered_at
     """).fetchall()

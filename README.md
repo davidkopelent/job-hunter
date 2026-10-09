@@ -14,6 +14,7 @@ flowchart LR
         LI[LinkedIn job alert emails]
         SJ[StartupJobs emails]
         WF[Wellfound emails]
+        JC[Jobs.cz emails]
     end
 
     subgraph Discover [1 · Discover]
@@ -33,6 +34,7 @@ flowchart LR
     LI --> F
     SJ --> F
     WF --> F
+    JC --> F
     F --> P -->|upsert| J
     J --> E --> D
     D --> S --> UI
@@ -55,6 +57,7 @@ Each source module handles both stages:
 | LinkedIn | job alert emails (`jobalerts-noreply@linkedin.com`), plus the work style marker from the card | public guest endpoint (HTML) |
 | StartupJobs | `jobot@startupjobs.cz` emails | schema.org `JobPosting` JSON-LD embedded in the page, work style tags |
 | Wellfound | `team@hi.wellfound.com` digests (plain-text part; the HTML part only has tracking redirects) | listing page HTML (only about half embed JSON-LD), side-panel "Remote Work Policy" |
+| Jobs.cz | `pomuzeme@jobs.cz` alerts: each tracking link is resolved to the listing ID; title, company and location from the card | listing page HTML (`data-test` hooks), work style from benefits; company career sites render in the browser, so the card's details stand in |
 
 `work_style` is a list of `onsite` / `hybrid` / `remote`, because a job may allow several; `null` means unknown. It comes from the listing page when the page shows it. LinkedIn hides it from logged-out visitors, so for LinkedIn it comes from the email card ("Praha (Hybrid)"). That's the one detail taken from an email, and it's deliberate: scraping LinkedIn with a logged-in session would risk your account.
 
@@ -93,6 +96,7 @@ job-hunter/
 │   ├── scraping.py          # shared HTTP session for listing pages
 │   ├── models.py            # Email, Job, JobDetails
 │   └── sources/             # one module per source: email parsing + listing page details
+│       ├── jobscz.py
 │       ├── linkedin.py
 │       ├── startupjobs.py
 │       └── wellfound.py
@@ -242,7 +246,7 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 
 ## Roadmap
 
-- [x] Job discovery from LinkedIn, StartupJobs and Wellfound emails
+- [x] Job discovery from LinkedIn, StartupJobs, Wellfound and Jobs.cz emails
 - [x] Persistence in Supabase with idempotent upserts
 - [x] Incremental loading with watermarks
 - [x] Enrichment from listing pages (details, work style, salary, description, closed listings)
@@ -250,4 +254,4 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 - [x] Deterministic scoring (role, work style, tech stack, seniority, compensation) with explainable sub-scores
 - [x] Next.js feed with Save / Dismiss / Apply
 - [ ] Learn preferences from feed actions
-- [ ] More sources (Wellfound, Greenhouse, Lever, Ashby, company career pages)
+- [ ] More sources (Greenhouse, Lever, Ashby, company career pages)

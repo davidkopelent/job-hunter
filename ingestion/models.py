@@ -13,13 +13,16 @@ class Email:
 
 @dataclass
 class Job:
-    """A job discovered in an email: its identity, plus hints only the email has."""
+    """A job discovered in an email: its identity, plus hints for details its listing page may not show."""
 
     source: str
     source_id: str
     url: str
     discovered_at: datetime
     email_work_style: list[str] | None = None
+    email_title: str | None = None
+    email_company: str | None = None
+    email_location: str | None = None
 
 
 @dataclass

@@ -9,4 +9,9 @@ export function placeAndWorkStyle(job: Job): string {
   return [details.location, workStyle].filter(Boolean).join(" · ") || "Location unknown";
 }
 
-export const SOURCE_NAMES: Record<string, string> = { linkedin: "LinkedIn", startupjobs: "StartupJobs" };
+export const SOURCE_NAMES: Record<string, string> = {
+  linkedin: "LinkedIn",
+  startupjobs: "StartupJobs",
+  wellfound: "Wellfound",
+  jobscz: "Jobs.cz",
+};
