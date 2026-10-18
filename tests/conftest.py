@@ -13,10 +13,10 @@ RECEIVED_AT = datetime(2026, 10, 7, 8, 0, tzinfo=UTC)
 
 
 class FakeResponse:
-    def __init__(self, status_code: int, text: str = "", url: str = ""):
+    def __init__(self, status_code: int, text: str = ""):
         self.status_code = status_code
         self.text = text
-        self.url = url  # after redirects
+        self.is_redirect = 300 <= status_code < 400
 
     def raise_for_status(self) -> None:
         pass
@@ -24,12 +24,11 @@ class FakeResponse:
 
 @pytest.fixture
 def serve(monkeypatch):
-    """serve("linkedin") answers every request with tests/fixtures/linkedin.html; serve(status=410) with an error.
-    `redirect_to` is the URL the request ends up at; by default, the requested one."""
+    """serve("linkedin") answers every request with tests/fixtures/linkedin.html; serve(status=410) with an error."""
 
-    def serve(fixture: str | None = None, status: int = 200, redirect_to: str | None = None) -> None:
+    def serve(fixture: str | None = None, status: int = 200) -> None:
         text = (FIXTURES / f"{fixture}.html").read_text() if fixture else ""
-        monkeypatch.setattr(session, "get", lambda url: FakeResponse(status, text, redirect_to or url))
+        monkeypatch.setattr(session, "get", lambda url, **kwargs: FakeResponse(status, text))
 
     return serve
 

@@ -50,8 +50,8 @@ def test_fetch_details_work_style_from_benefits(serve):
 
 
 def test_fetch_details_career_site(serve):
-    # The company's career site renders in the browser, so there's nothing to read.
-    serve(redirect_to="https://uniqa.jobs.cz/detail-pozice?r=detail&id=2001318768")
+    # The listing redirects to the company's career site, which isn't requested.
+    serve(status=302)
     assert jobscz.fetch_details("2001318768", "url") == JobDetails(closed=False)
 
 

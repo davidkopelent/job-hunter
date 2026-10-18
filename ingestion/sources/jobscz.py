@@ -1,6 +1,4 @@
 import re
-from urllib.parse import urlparse
-
 from bs4 import BeautifulSoup
 
 from ingestion.models import Email, Job, JobDetails
@@ -54,15 +52,14 @@ def listing_id(tracking_url: str) -> str:
 
 
 def fetch_details(source_id: str, url: str) -> JobDetails:
-    response = session.get(f"https://www.jobs.cz/rpd/{source_id}/")
+    # Many listings redirect to the company's career site (<company>.jobs.cz), which renders in the browser
+    # and may block scrapers (403): it isn't requested, and the email's title, company and location stand in.
+    response = session.get(f"https://www.jobs.cz/rpd/{source_id}/", allow_redirects=False)
+    if response.is_redirect:
+        return JobDetails(closed=False)
     if response.status_code in (404, 410):
         return JobDetails(closed=True)
     response.raise_for_status()
-
-    # Many listings redirect to the company's career site (<company>.jobs.cz), which renders in the browser:
-    # the page has no details, so the email's title, company and location stand in for them.
-    if urlparse(response.url).netloc != "www.jobs.cz":
-        return JobDetails(closed=False)
 
     page = BeautifulSoup(response.text, "html.parser")
     description = page.select_one('[data-test="jd-body-richtext"]')
