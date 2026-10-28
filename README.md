@@ -2,7 +2,7 @@
 
 A personal job radar. It discovers job listings in job alert emails, deduplicates them, fetches their full details from the listing pages, stores everything in Postgres, scores jobs for relevance and shows them in a simple feed.
 
-It's a tool I use during my own job search, and also a Data Engineering portfolio project: source-specific ingestion into a common data model, separate discovery and enrichment stages, incremental loading, idempotent writes, and a schema managed through migrations.
+It's a tool I use during my own job search. Under the hood: source-specific ingestion into a common data model, separate discovery and enrichment stages, incremental loading, idempotent writes, and a schema managed through migrations.
 
 The guiding principle is **high signal > complete coverage**: a small stream of relevant jobs beats every job on the internet.
 
@@ -71,7 +71,6 @@ Each source module handles both stages:
 - **No lost emails.** Each source's jobs and its watermark update commit in one transaction. If a run fails, the watermark doesn't move and the next run picks the emails up again.
 - **Freshness is visible.** `ingestion_state.last_checked_at` records each source's last successful check, even when no new emails arrived. The feed shows the oldest one, so a source that keeps failing shows up as stale.
 - **Schema owned by SQL migrations.** `supabase/migrations/` is the single source of truth. The Next.js app uses Prisma for queries only and reads the schema from the database (`prisma db pull`). It never runs migrations.
-- **Deterministic first.** Scoring is rule-based, with explainable sub-scores. An LLM may come later, if at all.
 
 ## Stack
 
@@ -182,7 +181,7 @@ update ingestion_state set last_email_at = now() - interval '30 days';
 
 ### 6. Make the scoring yours
 
-The preferences in `scoring/rules.py` are mine: data engineering roles, remote work in Czechia or the EU, my tech stack, mid-level seniority and a salary floor in CZK. Edit them to match what you're looking for:
+The preferences in `scoring/rules.py` are example ones. Edit them to match what you're looking for:
 
 | Constant | What it decides |
 | --- | --- |
@@ -193,7 +192,7 @@ The preferences in `scoring/rules.py` are mine: data engineering roles, remote w
 | `WORK_STYLE`, `REMOTE_REGION`, `REMOTE_ABROAD` | remote / hybrid / onsite preference, and where a remote job may be based |
 | `SALARY_FLOOR_CZK_MONTH`, `CZK_PER` | lowest acceptable salary, and exchange rates |
 
-Then update `tests/test_rules.py`, which checks the current preferences, and run `python -m scoring.score` again. Every run rescores every job.
+Then update `tests/test_rules.py`, which checks the current example preferences, and run `python -m scoring.score` again. Every run rescores every job.
 
 ### 7. Web app
 
