@@ -51,7 +51,8 @@ export function JobFilters() {
           className="h-9 w-full rounded-full bg-card pr-4 pl-9 text-sm shadow-[var(--shadow-card)] transition-shadow outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring/40"
         />
       </div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 md:pb-0">
+      {/* overflow-x-auto clips vertically too; padding + negative margin leaves room for the chips' shadow ring */}
+      <div className="-mx-4 -my-2 flex gap-2 overflow-x-auto px-4 py-2 md:-mx-1 md:px-1">
         <Popover>
           <PopoverTrigger className={chip(workStyles.length > 0)}>
             Work style
