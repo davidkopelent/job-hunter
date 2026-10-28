@@ -1,6 +1,6 @@
 # Job Hunter
 
-A personal job radar. It discovers job listings in job alert emails, deduplicates them, fetches their full details from the listing pages, stores everything in Postgres, and (soon) scores jobs for relevance and shows them in a simple feed.
+A personal job radar. It discovers job listings in job alert emails, deduplicates them, fetches their full details from the listing pages, stores everything in Postgres, scores jobs for relevance and shows them in a simple feed.
 
 It's a tool I use during my own job search, and also a Data Engineering portfolio project: source-specific ingestion into a common data model, separate discovery and enrichment stages, incremental loading, idempotent writes, and a schema managed through migrations.
 
@@ -71,7 +71,7 @@ Each source module handles both stages:
 - **No lost emails.** Each source's jobs and its watermark update commit in one transaction. If a run fails, the watermark doesn't move and the next run picks the emails up again.
 - **Freshness is visible.** `ingestion_state.last_checked_at` records each source's last successful check, even when no new emails arrived. The feed shows the oldest one, so a source that keeps failing shows up as stale.
 - **Schema owned by SQL migrations.** `supabase/migrations/` is the single source of truth. The Next.js app uses Prisma for queries only and reads the schema from the database (`prisma db pull`). It never runs migrations.
-- **Deterministic first.** Scoring will be rule-based, with explainable sub-scores. An LLM may come later, if at all.
+- **Deterministic first.** Scoring is rule-based, with explainable sub-scores. An LLM may come later, if at all.
 
 ## Stack
 
@@ -87,7 +87,7 @@ Each source module handles both stages:
 
 ```
 job-hunter/
-├── db/                      # shared Postgres connection (ingestion, later scoring)
+├── db/                      # shared Postgres connection (ingestion, scoring)
 ├── ingestion/
 │   ├── pipeline.py          # entry point: discover → enrich
 │   ├── discover.py          # stage 1: emails → jobs
@@ -112,76 +112,109 @@ job-hunter/
 │   ├── lib/                 # Prisma client, feed queries, auth
 │   ├── prisma/              # schema.prisma, pulled from the database
 │   └── proxy.ts             # password protection
+├── .env.example             # template for .env (web/.env.example for the web app)
 ├── requirements.txt
 └── requirements-dev.txt     # + pytest
 ```
 
-## Setup
+## Run it yourself
 
-### 1. Python
+Everything runs on free tiers: Gmail, Supabase, GitHub Actions and Vercel. Setup takes about half an hour.
+
+You need Python 3.12, Node.js 22.12 or newer (Prisma 7), a Gmail account, and accounts on [Supabase](https://supabase.com), GitHub and [Vercel](https://vercel.com).
+
+### 1. Fork and install
+
+Fork the repo on GitHub (the scheduled runs use your fork's Actions), then:
 
 ```bash
+git clone https://github.com/<you>/job-hunter.git
+cd job-hunter
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt   # runtime deps + pytest
 pytest                                # no network or database needed
+cp .env.example .env
+cp web/.env.example web/.env
 ```
 
-### 2. Gmail
+### 2. Subscribe to job alerts
+
+The pipeline only knows about jobs that reach your Gmail inbox as alert emails. Save searches with email alerts on any of the supported sites: [LinkedIn](https://www.linkedin.com/jobs/), [StartupJobs](https://www.startupjobs.cz), [Wellfound](https://wellfound.com) and [Jobs.cz](https://www.jobs.cz). You don't need all four; a source with no emails simply finds nothing.
+
+The alerts must arrive directly in that inbox, not forwarded, because each source finds its emails by sender (`GMAIL_QUERY` in `ingestion/sources/<source>.py`).
+
+### 3. Gmail app password
 
 Ingestion reads Gmail over IMAP with an [app password](https://myaccount.google.com/apppasswords). A Google Cloud OAuth app in Testing mode expires its tokens every 7 days, and publishing one requires a homepage and a privacy policy, which is a lot of overhead for a script that reads your own mailbox.
 
 1. Turn on 2-Step Verification for your Google account (app passwords require it).
-2. Create an app password and add it to `.env` without the spaces:
-
-   ```
-   GMAIL_ADDRESS=you@gmail.com
-   GMAIL_APP_PASSWORD=abcdefghijklmnop
-   ```
+2. Create an app password and put it in `.env` as `GMAIL_APP_PASSWORD`, without the spaces, next to `GMAIL_ADDRESS`.
 
 The mailbox is opened read-only and searched with Gmail's own query syntax (`X-GM-RAW`), so each source's `GMAIL_QUERY` works just like in the Gmail search box. The app password itself grants full mailbox access, so keep it only in `.env` and GitHub secrets. Changing your Google password revokes it.
 
-### 3. Supabase
+### 4. Supabase
 
-1. Create a Supabase project.
-2. Copy the **Session pooler** connection string (Connect → Connection string) into `.env`:
-
-   ```
-   DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
-   ```
+1. Create a Supabase project. Save the database password; Supabase shows it only once (you can reset it under Project Settings → Database).
+2. Copy the **Session pooler** connection string (Connect → Session pooler) into `.env` as `DATABASE_URL`, with your password filled in. If the password has characters such as `@`, `#` or `/`, URL-encode them or pick one with only letters and digits.
 
    The session pooler works over IPv4 and supports prepared statements. The direct connection is IPv6-only on the free plan.
 
-3. Install the [Supabase CLI](https://supabase.com/docs/guides/cli) and apply the migrations:
+3. Create the tables by applying the migrations with the [Supabase CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase`, or prefix the command with `npx`):
 
    ```bash
-   brew install supabase/tap/supabase
+   source .env
    supabase db push --db-url "$DATABASE_URL"
    ```
 
-### 4. Web app
+### 5. First run
 
-Needs Node.js 22.12 or newer (Prisma 7).
+```bash
+python -m ingestion.pipeline   # emails → jobs → job_details
+python -m scoring.score        # job_details → job_scores
+```
+
+Each source starts from the moment its migration ran, so the first run finds only emails that arrived after that. To pick up the alerts already in your inbox, move the watermarks back first (Supabase → SQL Editor):
+
+```sql
+update ingestion_state set last_email_at = now() - interval '30 days';
+```
+
+### 6. Make the scoring yours
+
+The preferences in `scoring/rules.py` are mine: data engineering roles, remote work in Czechia or the EU, my tech stack, mid-level seniority and a salary floor in CZK. Edit them to match what you're looking for:
+
+| Constant | What it decides |
+| --- | --- |
+| `WEIGHTS` | how many of the 100 points each sub-score is worth |
+| `ROLES` | title patterns and how well each role fits |
+| `STACK`, `STACK_FULL_MATCH` | technologies you want, and how many make a full match |
+| `SENIORITY` | title patterns for seniority levels |
+| `WORK_STYLE`, `REMOTE_REGION`, `REMOTE_ABROAD` | remote / hybrid / onsite preference, and where a remote job may be based |
+| `SALARY_FLOOR_CZK_MONTH`, `CZK_PER` | lowest acceptable salary, and exchange rates |
+
+Then update `tests/test_rules.py`, which checks the current preferences, and run `python -m scoring.score` again. Every run rescores every job.
+
+### 7. Web app
+
+Fill in `web/.env`: `DATABASE_URL` is the same URL as in `.env` but with port `6543` (the **transaction pooler**), and `APP_PASSWORD` is the password for the feed's login page. The session pooler (`5432`) allows only 15 clients in total, and serverless instances each open their own pool, so the web app uses the transaction pooler. The Python pipeline keeps the session pooler.
 
 ```bash
 cd web
 npm install                  # also runs `prisma generate`
+npm run dev                  # http://localhost:3000
 ```
 
-`web/.env`:
+### 8. Deploy
 
-```
-DATABASE_URL=<the Python .env URL, but port 6543>
-APP_PASSWORD=<long random password>
-```
+**Scheduled runs on GitHub Actions.** `.github/workflows/ingest.yml` runs the pipeline and then scoring every 4 hours, and on demand from the Actions tab (Run workflow).
 
-The web app uses Supabase's **transaction pooler** (same host, port `6543`). The session pooler (`5432`) allows only 15 clients in total, and serverless instances each open their own pool. The Python pipeline keeps the session pooler.
+1. Add the three values from `.env` as repository secrets (Settings → Secrets and variables → Actions): `DATABASE_URL`, `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD`. With the [GitHub CLI](https://cli.github.com): `gh secret set -f .env`.
+2. GitHub turns off workflows in forks. Open the Actions tab, enable them, and run **Ingest** once by hand to check the secrets.
 
-`npm run dev` serves the feed on http://localhost:3000.
+**Feed on Vercel.** Import your fork, set **Root Directory** to `web`, and add `DATABASE_URL` (transaction pooler, port 6543) and `APP_PASSWORD` as environment variables. Everything else is auto-detected.
 
-**Deploy on Vercel:** import the GitHub repo, set **Root Directory** to `web`, and add `DATABASE_URL` (transaction pooler, port 6543) and `APP_PASSWORD` as environment variables. Everything else is auto-detected.
-
-`.env` and `web/.env` are gitignored.
+`.env` and `web/.env` are gitignored; only the `.env.example` templates are committed.
 
 ## Usage
 
@@ -196,8 +229,6 @@ enriched 16 jobs
 ```
 
 Each stage also runs on its own: `python -m ingestion.discover` or `python -m ingestion.enrich`. The second is useful for retrying enrichment after a rate limit without reading Gmail again.
-
-**Scheduled runs:** `.github/workflows/ingest.yml` runs the pipeline and then scoring every 4 hours, and on demand from the Actions tab (Run workflow). It needs the three values from `.env` as repository secrets (Settings → Secrets and variables → Actions): `DATABASE_URL`, `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD`. To set them from `.env`: `gh secret set -f .env`.
 
 **Scoring:** `python -m scoring.score` rescores every open job into `job_scores`: a 0–100 `score` plus the 0–1 sub-scores behind it. Each comes from `scoring/rules.py`:
 
@@ -243,15 +274,3 @@ supabase db push --db-url "$DATABASE_URL"        # applies migrations that haven
 2. Add the module to `SOURCES` in `ingestion/sources/__init__.py`.
 3. Add a migration that inserts its watermark row into `ingestion_state` (`now()` = start from today).
 4. Add `tests/test_<source>.py`: an inline email snippet for `parse_jobs`, and a saved listing page in `tests/fixtures/` for `fetch_details` (one per page layout, plus the closed status code).
-
-## Roadmap
-
-- [x] Job discovery from LinkedIn, StartupJobs, Wellfound and Jobs.cz emails
-- [x] Persistence in Supabase with idempotent upserts
-- [x] Incremental loading with watermarks
-- [x] Enrichment from listing pages (details, work style, salary, description, closed listings)
-- [x] Scheduled runs on GitHub Actions
-- [x] Deterministic scoring (role, work style, tech stack, seniority, compensation) with explainable sub-scores
-- [x] Next.js feed with Save / Dismiss / Apply
-- [ ] Learn preferences from feed actions
-- [ ] More sources (Greenhouse, Lever, Ashby, company career pages)
