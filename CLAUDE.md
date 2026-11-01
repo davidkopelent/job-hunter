@@ -33,7 +33,7 @@ Adding a source means writing a source module, adding it to `SOURCES`, adding it
 
 Next.js 16 with Cache Components, so read `web/AGENTS.md` and the bundled docs in `web/node_modules/next/dist/docs/` before writing Next.js code; APIs differ from older versions (`proxy.ts` replaced middleware, request-time data goes behind `<Suspense>`, `refresh()` after mutations). Needs Node ≥ 22.12 (Prisma 7).
 
-- `lib/jobs.ts`: queries. Feed = open, scored jobs with no action or `saved`, filtered by URL params (`q`, `ws`, `min`, `sort`); Saved / Applied / Dismissed pages by `acted_at`. No feed table; it's a join.
+- `lib/jobs.ts`: queries. Feed = open, scored jobs with no action or `saved`, filtered by URL params (`q`, `ws`, `min`, `sort`); Saved / Applied / Dismissed pages by `acted_at`. Feed, Saved and Dismissed show 25 jobs per page (`page` param); Applied loads everything, because it counts by status. No feed table; it's a join.
 - `app/actions.ts`: `setAction(jobId, action | null)` upserts or deletes `job_actions` (applying sets `application_status = 'applied'`), `setApplicationStatus()`; both `refresh()`.
 - `lib/auth.ts` + `proxy.ts` + `app/login/`: single password `APP_PASSWORD`. The session cookie is an HMAC keyed by the password (changing it logs everyone out). Every server action calls `requireSession()` too; the proxy alone isn't enough.
 - `lib/db.ts`: Prisma 7 client with the `pg` driver adapter; generated into `lib/generated/prisma` (gitignored, `postinstall` regenerates).
