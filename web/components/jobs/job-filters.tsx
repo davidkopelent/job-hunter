@@ -27,6 +27,7 @@ export function JobFilters() {
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
+    next.delete("page"); // the results change, so back to the first page
     if (value) next.set(key, value);
     else next.delete(key);
     router.replace(next.size ? `${pathname}?${next}` : pathname, { scroll: false });

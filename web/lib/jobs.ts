@@ -38,13 +38,36 @@ export function parseFilters(params: SearchParams): Filters {
   };
 }
 
+export function parsePage(params: SearchParams): number {
+  const page = Number(params.page);
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
 const ORDER: Record<Sort, Prisma.jobsOrderByWithRelationInput> = {
   relevance: { job_scores: { score: "desc" } },
   newest: { discovered_at: "desc" },
   company: { job_details: { company: "asc" } },
 };
 
-export async function getFeed(filters: Filters): Promise<Job[]> {
+const PAGE_SIZE = 25;
+
+// A page past the end shows the last one: acting on a page's last job can remove that page.
+async function paginate(where: Prisma.jobsWhereInput, orderBy: Prisma.jobsOrderByWithRelationInput, requested: number) {
+  const total = await prisma.jobs.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(requested, totalPages);
+  const jobs: Job[] = await prisma.jobs.findMany({
+    where,
+    include,
+    // id breaks ties (scores often repeat), so a job can't appear on two pages.
+    orderBy: [orderBy, { id: "asc" }],
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+  });
+  return { jobs, total, page, totalPages };
+}
+
+export async function getFeed(filters: Filters, page: number) {
   const where: Prisma.jobsWhereInput[] = [OPEN, IN_FEED, { job_scores: { is: { score: { gte: filters.minScore } } } }];
   if (filters.workStyles.length) {
     where.push({ job_details: { is: { work_style: { hasSome: filters.workStyles } } } });
@@ -53,15 +76,24 @@ export async function getFeed(filters: Filters): Promise<Job[]> {
     const contains = { contains: filters.q, mode: "insensitive" } as const;
     where.push({ job_details: { is: { OR: [{ title: contains }, { company: contains }] } } });
   }
-  return prisma.jobs.findMany({ where: { AND: where }, include, orderBy: ORDER[filters.sort] });
+  // Section counts cover every page, not just this one.
+  const [result, relevant] = await Promise.all([
+    paginate({ AND: where }, ORDER[filters.sort], page),
+    prisma.jobs.count({ where: { AND: [...where, { job_scores: { is: { score: { gte: RELEVANT_SCORE } } } }] } }),
+  ]);
+  return { ...result, relevant };
 }
 
-export async function getByAction(action: Action): Promise<Job[]> {
-  return prisma.jobs.findMany({
-    where: { AND: [OPEN, { job_actions: { is: { action } } }] },
-    include,
-    orderBy: { job_actions: { acted_at: "desc" } },
-  });
+const withAction = (action: Action): Prisma.jobsWhereInput => ({ AND: [OPEN, { job_actions: { is: { action } } }] });
+const BY_ACTED_AT: Prisma.jobsOrderByWithRelationInput = { job_actions: { acted_at: "desc" } };
+
+export async function getByAction(action: Action, page: number) {
+  return paginate(withAction(action), BY_ACTED_AT, page);
+}
+
+// All of them: the page counts applications by status.
+export async function getApplications(): Promise<Job[]> {
+  return prisma.jobs.findMany({ where: withAction("applied"), include, orderBy: BY_ACTED_AT });
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

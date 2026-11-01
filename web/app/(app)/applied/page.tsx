@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { ApplicationStatusSelect } from "@/components/jobs/application-status-select";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/job-options";
 import { EmptyState, Page, PageHeader } from "@/components/page-header";
-import { APPLICATION_STATUSES, getByAction, type ApplicationStatus } from "@/lib/jobs";
+import { APPLICATION_STATUSES, getApplications, type ApplicationStatus } from "@/lib/jobs";
 import { formatDay } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export default function AppliedPage() {
 
 async function Applications() {
   await connection();
-  const jobs = await getByAction("applied");
+  const jobs = await getApplications();
   const statusOf = (job: (typeof jobs)[number]) => job.job_actions!.application_status as ApplicationStatus;
   const inProgress = jobs.filter((job) => statusOf(job) !== "rejected").length;
 

@@ -4,9 +4,10 @@ import { Suspense } from "react";
 import { Greeting } from "@/components/greeting";
 import { JobCard } from "@/components/jobs/job-card";
 import { JobFilters } from "@/components/jobs/job-filters";
+import { JobPagination } from "@/components/jobs/job-pagination";
 import { EmptyState, Page, PageHeader } from "@/components/page-header";
 import { formatMinutes } from "@/components/scan-status";
-import { getFeed, getLastChecked, getStats, parseFilters, RELEVANT_SCORE, type Job } from "@/lib/jobs";
+import { getFeed, getLastChecked, getStats, parseFilters, parsePage, RELEVANT_SCORE, type Job } from "@/lib/jobs";
 import { minutesAgo } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Feed — Job Hunter" };
@@ -77,11 +78,12 @@ async function Stats() {
 }
 
 async function FeedList({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
-  const filters = parseFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseFilters(params);
   await connection();
-  const jobs = await getFeed(filters);
+  const { jobs, total, relevant, page, totalPages } = await getFeed(filters, parsePage(params));
 
-  if (jobs.length === 0) {
+  if (total === 0) {
     const filtered = filters.q || filters.workStyles.length || filters.minScore;
     return filtered ? (
       <EmptyState title="No positions match your filters." body="Try lowering the minimum score or clearing the search." />
@@ -93,20 +95,23 @@ async function FeedList({ searchParams }: Pick<PageProps<"/">, "searchParams">) 
   const top = jobs.filter((job) => job.job_scores!.score >= RELEVANT_SCORE);
   const rest = jobs.filter((job) => job.job_scores!.score < RELEVANT_SCORE);
   return (
-    <div className="space-y-10">
-      <Section label="Worth your time" jobs={top} />
-      <Section label="Other matches" jobs={rest} />
-    </div>
+    <>
+      <div className="space-y-10">
+        <Section label="Worth your time" jobs={top} total={relevant} />
+        <Section label="Other matches" jobs={rest} total={total - relevant} />
+      </div>
+      <JobPagination pathname="/" params={params} page={page} totalPages={totalPages} />
+    </>
   );
 }
 
-function Section({ label, jobs }: { label: string; jobs: Job[] }) {
+function Section({ label, jobs, total }: { label: string; jobs: Job[]; total: number }) {
   if (jobs.length === 0) return null;
   return (
     <section>
       <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         {label}
-        <span className="rounded-full bg-secondary px-2 py-px text-[11px] tracking-normal tabular">{jobs.length}</span>
+        <span className="rounded-full bg-secondary px-2 py-px text-[11px] tracking-normal tabular">{total}</span>
         <span className="h-px flex-1 bg-border" />
       </h2>
       <div className="grid gap-3">
