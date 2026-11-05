@@ -17,9 +17,9 @@ JOB_PATTERN = re.compile(r"job_listing_slug=(\d+)-([\w-]+)")
 # "Remote Work Policy" values, e.g. "Onsite or remote", "Remote only", "In office".
 WORK_STYLES = {r"onsite|in office": "onsite", r"hybrid": "hybrid", r"remote": "remote"}
 
-# Annual pay like "£65k – £75k" or "₹30L – ₹40L" (L = lakh).
-AMOUNT_PATTERN = re.compile(r"(\D+?)([\d.]+)([kL])")
-MULTIPLIERS = {"k": 1_000, "L": 100_000}
+# Annual pay like "£65k – £75k", "₹30L – ₹40L" (L = lakh) or "₹50,000 – ₹70,000".
+AMOUNT_PATTERN = re.compile(r"(\D+?)([\d,.]+)([kL]?)")
+MULTIPLIERS = {"k": 1_000, "L": 100_000, "": 1}
 
 
 def parse_jobs(email: Email) -> list[Job]:
@@ -89,7 +89,7 @@ def salary(text: str) -> dict:
     if not pay:
         return {}
     amounts = AMOUNT_PATTERN.findall(pay)
-    values = [float(value) * MULTIPLIERS[unit] for _, value, unit in amounts]
+    values = [float(value.replace(",", "")) * MULTIPLIERS[unit] for _, value, unit in amounts]
     return {
         "salary": pay,
         "salary_min": min(values),
