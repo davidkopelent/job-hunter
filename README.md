@@ -233,10 +233,10 @@ Each stage also runs on its own: `python -m ingestion.discover` or `python -m in
 
 | Sub-score | Weight | From |
 | --- | --- | --- |
-| `role` | 35 | Title: data engineering 1, backend 0.7, full stack 0.6, frontend 0.5, everything else 0 |
-| `work_style` | 35 | Remote 1 (0.6 if based outside CZ/EU), hybrid 0.1, onsite 0, unknown 0.5 |
+| `role` | 30 | Title: data engineering 1, backend 0.7, full stack 0.6, frontend 0.5, everything else 0 |
+| `work_style` | 30 | Remote 1 (0.6 if based outside CZ/EU), hybrid 0.1, onsite 0, unknown 0.5 |
+| `seniority` | 20 | Title: none/mid 1, junior 0.4, senior 0.25, lead/principal/staff 0.2 |
 | `stack` | 15 | Title + description: share of 3 technologies from my list (Snowflake, dbt, SQL, Airflow, Python, …) |
-| `seniority` | 10 | Title: none/mid 1, senior 0.6, junior 0.4, lead/principal 0.2 |
 | `salary` | 5 | Top of the stated range ≥ 60k CZK/month 1, below 0, not stated 0.5 |
 
 Every run rescores everything, so editing a rule applies to all jobs on the next run.
