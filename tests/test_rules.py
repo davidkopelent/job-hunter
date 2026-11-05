@@ -22,7 +22,17 @@ def test_score_role(title, expected):
 
 @pytest.mark.parametrize(
     "title, expected",
-    [("Data Engineer", 1), ("Senior Data Engineer", 0.6), ("Junior Data Engineer", 0.4), ("Lead Data Engineer", 0.2)],
+    [
+        ("Data Engineer", 1),
+        ("Senior Data Engineer", 0.25),
+        ("Sr. Backend Developer", 0.25),
+        ("Seniorní datový inženýr", 0.25),
+        ("Mid/Senior Data Engineer", 1),  # mid wins over senior
+        ("Medior Backend Developer", 1),
+        ("Junior Data Engineer", 0.4),
+        ("Lead Data Engineer", 0.2),
+        ("Senior Staff Engineer", 0.2),  # lead/staff wins over senior
+    ],
 )
 def test_score_seniority(title, expected):
     assert rules.score_seniority(title) == expected

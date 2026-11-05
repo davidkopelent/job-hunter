@@ -17,7 +17,7 @@ export function scoreLabel(score: number): string {
 export const SUB_SCORES = [
   { key: "role", label: "Role", hint: "Title fit: data engineering, then backend, full stack, frontend" },
   { key: "work_style", label: "Work style", hint: "Remote first; hybrid and onsite score low" },
+  { key: "seniority", label: "Seniority", hint: "Mid-level fits best; senior and lead score low" },
   { key: "stack", label: "Tech stack", hint: "Share of your technologies the listing mentions" },
-  { key: "seniority", label: "Seniority", hint: "Mid-level fits best; senior is a stretch" },
   { key: "salary", label: "Salary", hint: "Stated salary vs. your 60k CZK/month floor" },
 ] as const;

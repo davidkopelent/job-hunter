@@ -3,7 +3,7 @@
 import re
 
 # Points each sub-score is worth; the total is 0–100.
-WEIGHTS = {"role": 35, "work_style": 35, "stack": 15, "seniority": 10, "salary": 5}
+WEIGHTS = {"role": 30, "work_style": 30, "seniority": 20, "stack": 15, "salary": 5}
 
 # Title patterns, checked in order; the first match wins, no match scores 0.
 ROLES = [
@@ -39,8 +39,10 @@ STACK_FULL_MATCH = 3
 # I'm mid-level: senior titles are a stretch, junior and lead titles a poor fit.
 SENIORITY = [
     (r"\b(lead|principal|staff|head|architect|director)\b", 0.2),
+    # Before senior, so "Mid/Senior Developer" counts as mid.
+    (r"\b(mid|medior|intermediate)\b", 1),
     (r"\b(junior|jr|intern|internship|trainee|graduate|stáž|absolvent)\b", 0.4),
-    (r"\b(senior|sr)\b", 0.6),
+    (r"\b(senior|sr|seniorn\w*)\b", 0.25),
 ]
 NO_SENIORITY = 1
 
