@@ -67,4 +67,11 @@ def test_salary():
         "salary_period": "year",
     }
     assert wellfound.salary("₹30L – ₹40L")["salary_max"] == 4_000_000
+    assert wellfound.salary("₹50,000 – ₹70,000 • No equity") == {
+        "salary": "₹50,000 – ₹70,000",
+        "salary_min": 50_000,
+        "salary_max": 70_000,
+        "salary_currency": "INR",
+        "salary_period": "year",
+    }
     assert wellfound.salary("") == {}
